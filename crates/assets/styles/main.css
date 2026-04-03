@@ -1,0 +1,224 @@
+:root {
+    --bg-primary: #1e1e2e;
+    --bg-secondary: #313244;
+    --bg-tertiary: #45475a;
+    --text-primary: #cdd6f4;
+    --text-secondary: #a6adc8;
+    --accent: #89b4fa;
+    --accent-hover: #74c7ec;
+    --error: #f38ba8;
+    --border: #585b70;
+    --null-color: #6c7086;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
+    font-size: 14px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+.app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+.toolbar {
+    display: flex;
+    align-items: center;
+    padding: 8px 16px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+}
+
+.toolbar h1 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-right: 16px;
+}
+
+.connection-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.db-path-input {
+    flex: 1;
+    padding: 4px 8px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 13px;
+}
+
+.db-path-input:disabled {
+    opacity: 0.6;
+}
+
+.connect-btn, .disconnect-btn {
+    padding: 4px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.connect-btn {
+    background: #a6e3a1;
+    color: var(--bg-primary);
+}
+
+.connect-btn:hover {
+    background: #94e2d5;
+}
+
+.disconnect-btn {
+    background: var(--error);
+    color: var(--bg-primary);
+}
+
+.disconnect-btn:hover {
+    opacity: 0.9;
+}
+
+.status {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.status.connected {
+    color: #a6e3a1;
+}
+
+.status.disconnected {
+    color: var(--text-secondary);
+}
+
+.workspace {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.editor-panel {
+    display: flex;
+    flex-direction: column;
+    border-bottom: 1px solid var(--border);
+}
+
+.editor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 12px;
+    background: var(--bg-secondary);
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.run-btn {
+    padding: 4px 16px;
+    background: var(--accent);
+    color: var(--bg-primary);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.run-btn:hover:not(:disabled) {
+    background: var(--accent-hover);
+}
+
+.run-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.sql-editor {
+    width: 100%;
+    min-height: 120px;
+    padding: 12px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border: none;
+    outline: none;
+    resize: vertical;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.results-panel {
+    flex: 1;
+    overflow: auto;
+    padding: 0;
+}
+
+.result-info {
+    padding: 6px 12px;
+    background: var(--bg-secondary);
+    font-size: 12px;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border);
+}
+
+.error {
+    padding: 12px;
+    color: var(--error);
+    background: var(--bg-secondary);
+    border-left: 3px solid var(--error);
+    margin: 8px;
+    border-radius: 4px;
+}
+
+.result-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.result-table th {
+    position: sticky;
+    top: 0;
+    background: var(--bg-tertiary);
+    padding: 6px 12px;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 2px solid var(--border);
+    white-space: nowrap;
+}
+
+.result-table td {
+    padding: 4px 12px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.result-table tr:hover {
+    background: var(--bg-secondary);
+}
+
+.null-value {
+    color: var(--null-color);
+    font-style: italic;
+}
