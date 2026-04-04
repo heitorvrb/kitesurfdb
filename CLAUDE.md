@@ -15,6 +15,8 @@ cargo test                         # run all tests
 cargo test -p db                   # test just the db crate
 cargo test -p db test_introspect   # run a single test by name
 cargo run -p app                   # launch the desktop application
+dx serve --desktop --package app   # launch with hot reloading (RSX/CSS changes)
+dx serve --hotpatch --package app  # launch with experimental Rust-level hot reloading
 ```
 
 System dependencies required for `app` crate (Dioxus desktop/webview):

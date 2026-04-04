@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 core = { path = "../core" }
+dark-light = "2.0.0"
 db = { path = "../db" }
 dioxus = { version = "0.7", features = ["desktop"] }
 tokio = { version = "1", features = ["full"] }
