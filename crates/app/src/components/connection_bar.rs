@@ -5,6 +5,9 @@ use db::traits::DbBackend;
 use db::types::ConnectionConfig;
 use dioxus::prelude::*;
 
+#[css_module("/assets/styles/connection_bar.css")]
+struct Styles;
+
 #[component]
 pub fn ConnectionBar(
     backend: Signal<Option<Arc<SqliteBackend>>>,
@@ -53,11 +56,11 @@ pub fn ConnectionBar(
     };
 
     rsx! {
-        header { class: "toolbar",
+        header { class: Styles::toolbar,
             h1 { "Kitesurf" }
-            div { class: "connection-bar",
+            div { class: Styles::connection_bar,
                 input {
-                    class: "db-path-input",
+                    class: Styles::db_path_input,
                     value: "{db_path}",
                     placeholder: "SQLite path (e.g. :memory: or /path/to/db.sqlite)",
                     disabled: *is_connected.read(),
@@ -65,21 +68,21 @@ pub fn ConnectionBar(
                 }
                 if *is_connected.read() {
                     button {
-                        class: "disconnect-btn",
+                        class: Styles::disconnect_btn,
                         onclick: disconnect,
                         "Disconnect"
                     }
                 } else {
                     button {
-                        class: "connect-btn",
+                        class: Styles::connect_btn,
                         onclick: connect,
                         "Connect"
                     }
                 }
                 if *is_connected.read() {
-                    span { class: "status connected", "Connected" }
+                    span { class: "{Styles::status} {Styles::connected}", "Connected" }
                 } else {
-                    span { class: "status disconnected", "Disconnected" }
+                    span { class: "{Styles::status} {Styles::disconnected}", "Disconnected" }
                 }
             }
         }

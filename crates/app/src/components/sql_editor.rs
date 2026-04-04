@@ -5,6 +5,9 @@ use db::traits::DbBackend;
 use db::types::QueryResult;
 use dioxus::prelude::*;
 
+#[css_module("/assets/styles/sql_editor.css")]
+struct Styles;
+
 #[component]
 pub fn SqlEditor(
     backend: Signal<Option<Arc<SqliteBackend>>>,
@@ -42,18 +45,18 @@ pub fn SqlEditor(
     };
 
     rsx! {
-        div { class: "editor-panel",
-            div { class: "editor-header",
+        div { class: Styles::editor_panel,
+            div { class: Styles::editor_header,
                 span { "SQL Editor" }
                 button {
-                    class: "run-btn",
+                    class: Styles::run_btn,
                     disabled: *is_running.read() || !*is_connected.read(),
                     onclick: run_query,
                     if *is_running.read() { "Running..." } else { "Run" }
                 }
             }
             textarea {
-                class: "sql-editor",
+                class: Styles::sql_editor,
                 value: "{sql_input}",
                 placeholder: "Enter SQL query...",
                 oninput: move |evt| sql_input.set(evt.value()),
