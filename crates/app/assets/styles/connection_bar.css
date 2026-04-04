@@ -1,0 +1,76 @@
+.toolbar {
+    display: flex;
+    align-items: center;
+    padding: 8px 16px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+}
+
+.toolbar h1 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-right: 16px;
+}
+
+.connection-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.db-path-input {
+    flex: 1;
+    padding: 4px 8px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 13px;
+}
+
+.db-path-input:disabled {
+    opacity: 0.6;
+}
+
+.connect-btn, .disconnect-btn {
+    padding: 4px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.connect-btn {
+    background: #a6e3a1;
+    color: var(--bg-primary);
+}
+
+.connect-btn:hover {
+    background: #94e2d5;
+}
+
+.disconnect-btn {
+    background: var(--error);
+    color: var(--bg-primary);
+}
+
+.disconnect-btn:hover {
+    opacity: 0.9;
+}
+
+.status {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.status.connected {
+    color: #a6e3a1;
+}
+
+.status.disconnected {
+    color: var(--text-secondary);
+}

@@ -6,7 +6,8 @@ use dioxus::prelude::*;
 
 use crate::components::{ConnectionBar, ResultsPanel, SqlEditor};
 
-const STYLE: &str = include_str!("../../assets/styles/main.css");
+#[css_module("/assets/styles/main.css")]
+struct Styles;
 
 #[component]
 pub fn App() -> Element {
@@ -16,15 +17,14 @@ pub fn App() -> Element {
     let error_msg: Signal<Option<String>> = use_signal(|| None);
 
     rsx! {
-        style { {STYLE} }
-        div { class: "app",
+        div { class: Styles::app,
             ConnectionBar {
                 backend,
                 is_connected,
                 query_result,
                 error_msg,
             }
-            main { class: "workspace",
+            main { class: Styles::workspace,
                 SqlEditor {
                     backend,
                     query_result,
