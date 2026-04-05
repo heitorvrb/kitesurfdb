@@ -9,3 +9,5 @@ dark-light = "2.0.0"
 db = { path = "../db" }
 dioxus = { version = "0.7", features = ["desktop"] }
 tokio = { version = "1", features = ["full"] }
+tokio-util = "0.7"
+uuid = { version = "1", features = ["v4"] }

@@ -1,0 +1,12 @@
+.table-browser {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+}
+
+.loading {
+    padding: 12px;
+    color: var(--text-secondary);
+    font-size: 13px;
+}

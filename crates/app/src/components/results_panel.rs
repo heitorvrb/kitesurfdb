@@ -6,17 +6,17 @@ struct Styles;
 
 #[component]
 pub fn ResultsPanel(
-    query_result: Signal<Option<QueryResult>>,
-    error_msg: Signal<Option<String>>,
+    result: Option<QueryResult>,
+    error: Option<String>,
 ) -> Element {
     rsx! {
         div { class: Styles::results_panel,
-            if let Some(err) = error_msg.read().as_ref() {
+            if let Some(err) = &error {
                 div { class: "error", "{err}" }
             }
-            if let Some(result) = query_result.read().as_ref() {
+            if let Some(result) = &result {
                 div { class: Styles::result_info,
-                    "Query: {result.query} | Rows: {result.rows.len()} | Time: {result.execution_time:?}"
+                    "Rows: {result.rows.len()} | Time: {result.execution_time:?}"
                 }
                 if !result.columns.is_empty() {
                     table { class: Styles::result_table,
