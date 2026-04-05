@@ -1,8 +1,9 @@
 use std::sync::Arc;
 
+use app_core::tab_manager::TabManager;
 use db::sqlite::SqliteBackend;
 use db::traits::DbBackend;
-use db::types::ConnectionConfig;
+use db::types::{ConnectionConfig, SchemaInfo};
 use dioxus::prelude::*;
 
 #[css_module("/assets/styles/connection_bar.css")]
@@ -12,14 +13,14 @@ struct Styles;
 pub fn ConnectionBar(
     backend: Signal<Option<Arc<SqliteBackend>>>,
     is_connected: Signal<bool>,
-    query_result: Signal<Option<db::types::QueryResult>>,
-    error_msg: Signal<Option<String>>,
+    tab_manager: Signal<TabManager>,
+    schema_info: Signal<Option<SchemaInfo>>,
 ) -> Element {
     let mut db_path = use_signal(|| String::from(":memory:"));
     let mut connection_error: Signal<Option<String>> = use_signal(|| None);
     let mut is_connected = is_connected;
-    let mut query_result = query_result;
-    let mut error_msg = error_msg;
+    let mut schema_info = schema_info;
+    let mut tab_manager = tab_manager;
 
     let connect = move |_| {
         let path = db_path.read().clone();
@@ -29,10 +30,14 @@ pub fn ConnectionBar(
             let config = ConnectionConfig::new_sqlite("session", &path);
             match SqliteBackend::connect(&config).await {
                 Ok(b) => {
-                    backend.set(Some(Arc::new(b)));
+                    let b = Arc::new(b);
+                    match b.introspect().await {
+                        Ok(info) => schema_info.set(Some(info)),
+                        Err(_) => schema_info.set(None),
+                    }
+                    backend.set(Some(b));
                     is_connected.set(true);
-                    query_result.set(None);
-                    error_msg.set(None);
+                    tab_manager.write().open_sql_editor();
                 }
                 Err(e) => {
                     connection_error.set(Some(e.to_string()));
@@ -50,8 +55,12 @@ pub fn ConnectionBar(
             }
             backend.set(None);
             is_connected.set(false);
-            query_result.set(None);
-            error_msg.set(None);
+            schema_info.set(None);
+            // Close all tabs
+            let ids: Vec<_> = tab_manager.read().tabs().iter().map(|t| t.id).collect();
+            for id in ids {
+                tab_manager.write().close_tab(id);
+            }
         });
     };
 
