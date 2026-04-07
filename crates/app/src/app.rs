@@ -1,10 +1,11 @@
 use std::sync::Arc;
 
+use app_core::tab_manager::TabManager;
 use db::sqlite::SqliteBackend;
-use db::types::QueryResult;
+use db::types::SchemaInfo;
 use dioxus::prelude::*;
 
-use crate::components::{ConnectionBar, ResultsPanel, SqlEditor};
+use crate::components::{ConnectionBar, EditorArea, Sidebar};
 
 #[css_module("/assets/styles/main.css")]
 struct Styles;
@@ -13,27 +14,28 @@ struct Styles;
 pub fn App() -> Element {
     let backend: Signal<Option<Arc<SqliteBackend>>> = use_signal(|| None);
     let is_connected = use_signal(|| false);
-    let query_result: Signal<Option<QueryResult>> = use_signal(|| None);
-    let error_msg: Signal<Option<String>> = use_signal(|| None);
+    let tab_manager: Signal<TabManager> = use_signal(TabManager::new);
+    let schema_info: Signal<Option<SchemaInfo>> = use_signal(|| None);
 
     rsx! {
         div { class: Styles::app,
             ConnectionBar {
                 backend,
                 is_connected,
-                query_result,
-                error_msg,
+                tab_manager,
+                schema_info,
             }
-            main { class: Styles::workspace,
-                SqlEditor {
-                    backend,
-                    query_result,
-                    error_msg,
+            div { class: Styles::main_layout,
+                Sidebar {
+                    schema_info,
+                    tab_manager,
                     is_connected,
+                    backend,
                 }
-                ResultsPanel {
-                    query_result,
-                    error_msg,
+                EditorArea {
+                  tab_manager, 
+                  backend,
+                  schema_info
                 }
             }
         }

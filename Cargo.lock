@@ -58,6 +58,8 @@ dependencies = [
  "db",
  "dioxus",
  "tokio",
+ "tokio-util",
+ "uuid",
 ]
 
 [[package]]

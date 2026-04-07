@@ -62,7 +62,7 @@ impl ConnectionConfig {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct QueryResult {
     pub columns: Vec<ColumnInfo>,
     pub rows: Vec<Vec<DbValue>>,
@@ -71,7 +71,7 @@ pub struct QueryResult {
     pub query: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ColumnInfo {
     pub name: String,
     pub type_name: String,
