@@ -32,7 +32,11 @@ pub fn App() -> Element {
                     is_connected,
                     backend,
                 }
-                EditorArea { tab_manager, backend, schema_info }
+                EditorArea {
+                  tab_manager, 
+                  backend,
+                  schema_info
+                }
             }
         }
     }
