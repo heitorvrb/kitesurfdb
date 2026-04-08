@@ -80,6 +80,69 @@ impl DbBackend for PostgresBackend {
         })
     }
 
+    async fn get_object_definition(
+        &self,
+        name: &str,
+        schema: Option<&str>,
+        object_type: &ObjectType,
+    ) -> Result<String, DbError> {
+        let schema = schema.unwrap_or("public");
+        match object_type {
+            ObjectType::Trigger => {
+                let sql = "SELECT pg_get_triggerdef(t.oid, true) AS definition \
+                           FROM pg_trigger t \
+                           JOIN pg_class c ON t.tgrelid = c.oid \
+                           JOIN pg_namespace n ON c.relnamespace = n.oid \
+                           WHERE t.tgname = $1 AND n.nspname = $2 \
+                           LIMIT 1";
+                let row: Option<PgRow> = sqlx::query(sql)
+                    .bind(name)
+                    .bind(schema)
+                    .fetch_optional(&self.pool)
+                    .await?;
+                match row {
+                    Some(row) => Ok(row.get::<String, _>("definition")),
+                    None => Err(DbError::QueryFailed(format!("Trigger '{name}' not found"))),
+                }
+            }
+            ObjectType::Function => {
+                let sql = "SELECT pg_get_functiondef(p.oid) AS definition \
+                           FROM pg_proc p \
+                           JOIN pg_namespace n ON p.pronamespace = n.oid \
+                           WHERE p.proname = $1 AND n.nspname = $2 \
+                           LIMIT 1";
+                let row: Option<PgRow> = sqlx::query(sql)
+                    .bind(name)
+                    .bind(schema)
+                    .fetch_optional(&self.pool)
+                    .await?;
+                match row {
+                    Some(row) => Ok(row.get::<String, _>("definition")),
+                    None => Err(DbError::QueryFailed(format!("Function '{name}' not found"))),
+                }
+            }
+            ObjectType::View => {
+                let sql = "SELECT pg_get_viewdef(c.oid, true) AS definition \
+                           FROM pg_class c \
+                           JOIN pg_namespace n ON c.relnamespace = n.oid \
+                           WHERE c.relname = $1 AND n.nspname = $2 AND c.relkind = 'v' \
+                           LIMIT 1";
+                let row: Option<PgRow> = sqlx::query(sql)
+                    .bind(name)
+                    .bind(schema)
+                    .fetch_optional(&self.pool)
+                    .await?;
+                match row {
+                    Some(row) => Ok(row.get::<String, _>("definition")),
+                    None => Err(DbError::QueryFailed(format!("View '{name}' not found"))),
+                }
+            }
+            ObjectType::Table => Err(DbError::QueryFailed(
+                "Tables do not have a SQL definition".into(),
+            )),
+        }
+    }
+
     async fn introspect(&self) -> Result<SchemaInfo, DbError> {
         let tables = self.query_objects("BASE TABLE", ObjectType::Table).await?;
         let views = self.query_objects("VIEW", ObjectType::View).await?;
@@ -378,6 +441,63 @@ mod tests {
             .unwrap();
         assert!(result.columns.is_empty());
         assert!(result.rows.is_empty());
+
+        backend.disconnect().await.unwrap();
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_create_table() {
+        let config = pg_config();
+        let backend = PostgresBackend::connect(&config).await.unwrap();
+
+        let result = backend
+            .execute_query(
+                "CREATE TABLE test_automated_users (
+                    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    age INTEGER CHECK (age >= 0)
+                );",
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(result.rows_affected, 0);
+
+        let insert_result = backend
+            .execute_query(
+                "INSERT INTO test_automated_users (name, age) VALUES ('Alice', 30), ('Bob', 25);",
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(insert_result.rows_affected, 0);
+
+        let select_result = backend
+            .execute_query("SELECT * FROM test_automated_users ORDER BY id")
+            .await
+            .unwrap();
+
+        assert_eq!(select_result.rows.len(), 2);
+        assert_eq!(select_result.rows[0][1], DbValue::Text("Alice".into()));
+        assert_eq!(select_result.rows[0][2], DbValue::Int(30));
+        assert_eq!(select_result.rows[1][1], DbValue::Text("Bob".into()));
+        assert_eq!(select_result.rows[1][2], DbValue::Int(25));
+
+        let incorrect_insert_result = backend
+            .execute_query(
+                "INSERT INTO test_automated_users (name, age) VALUES ('Invalid Age', -1);",
+            )
+            .await;
+
+        assert!(incorrect_insert_result.is_err());
+
+        let delete_result = backend
+            .execute_query("DROP TABLE test_automated_users;")
+            .await
+            .unwrap();
+
+        assert_eq!(delete_result.rows_affected, 0);
 
         backend.disconnect().await.unwrap();
     }

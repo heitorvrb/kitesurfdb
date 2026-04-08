@@ -35,16 +35,48 @@
     cursor: not-allowed;
 }
 
+.editor-container {
+    position: relative;
+    min-height: 120px;
+}
+
+.highlight-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 12px;
+    margin: 0;
+    background: var(--bg-primary);
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow: auto;
+    pointer-events: none;
+    border: none;
+}
+
 .sql-editor {
+    position: relative;
     width: 100%;
     min-height: 120px;
     padding: 12px;
-    background: var(--bg-primary);
-    color: var(--text-primary);
+    background: transparent;
+    color: transparent;
+    caret-color: var(--text-primary);
     border: none;
     outline: none;
     resize: vertical;
     font-family: inherit;
     font-size: 14px;
     line-height: 1.5;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.sql-editor::placeholder {
+    color: var(--text-secondary);
 }

@@ -1,0 +1,37 @@
+.definition-view {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+}
+
+.definition-header {
+    display: flex;
+    align-items: center;
+    padding: 6px 12px;
+    background: var(--bg-secondary);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border);
+}
+
+.loading {
+    padding: 12px;
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+.definition-content {
+    flex: 1;
+    overflow: auto;
+    padding: 12px;
+    margin: 0;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}

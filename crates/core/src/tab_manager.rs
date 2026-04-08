@@ -11,6 +11,14 @@ pub enum TabType {
         object_name: String,
         generated_sql: String,
     },
+    TriggerView {
+        object_name: String,
+        definition: Option<String>,
+    },
+    FunctionView {
+        object_name: String,
+        definition: Option<String>,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -113,6 +121,52 @@ impl TabManager {
             format!("Query {n}"),
             TabType::SqlEditor {
                 sql_content: String::new(),
+            },
+        )
+    }
+
+    pub fn open_trigger_view(&mut self, trigger_name: String, schema: Option<String>) -> Uuid {
+        let qualified_name = match &schema {
+            Some(s) => format!("{s}.{trigger_name}"),
+            None => trigger_name.clone(),
+        };
+
+        if let Some(existing) = self.tabs.iter().find(|t| {
+            matches!(&t.tab_type, TabType::TriggerView { object_name, .. } if object_name == &qualified_name)
+        }) {
+            let id = existing.id;
+            self.active_tab_id = Some(id);
+            return id;
+        }
+
+        self.open_tab(
+            trigger_name,
+            TabType::TriggerView {
+                object_name: qualified_name,
+                definition: None,
+            },
+        )
+    }
+
+    pub fn open_function_view(&mut self, function_name: String, schema: Option<String>) -> Uuid {
+        let qualified_name = match &schema {
+            Some(s) => format!("{s}.{function_name}"),
+            None => function_name.clone(),
+        };
+
+        if let Some(existing) = self.tabs.iter().find(|t| {
+            matches!(&t.tab_type, TabType::FunctionView { object_name, .. } if object_name == &qualified_name)
+        }) {
+            let id = existing.id;
+            self.active_tab_id = Some(id);
+            return id;
+        }
+
+        self.open_tab(
+            function_name,
+            TabType::FunctionView {
+                object_name: qualified_name,
+                definition: None,
             },
         )
     }
@@ -312,6 +366,70 @@ mod tests {
         let id1 = tm.open_table_browser("users".into(), Some("public".into()));
         let id2 = tm.open_table_browser("users".into(), Some("audit".into()));
         assert_ne!(id1, id2);
+        assert_eq!(tm.tabs().len(), 2);
+    }
+
+    #[test]
+    fn test_open_trigger_view() {
+        let mut tm = TabManager::new();
+        let id = tm.open_trigger_view("my_trigger".into(), None);
+        let tab = tm.tab_by_id(id).unwrap();
+        assert_eq!(tab.title, "my_trigger");
+        assert_eq!(
+            tab.tab_type,
+            TabType::TriggerView {
+                object_name: "my_trigger".into(),
+                definition: None,
+            }
+        );
+    }
+
+    #[test]
+    fn test_open_trigger_view_with_schema() {
+        let mut tm = TabManager::new();
+        let id = tm.open_trigger_view("my_trigger".into(), Some("public".into()));
+        let tab = tm.tab_by_id(id).unwrap();
+        assert_eq!(
+            tab.tab_type,
+            TabType::TriggerView {
+                object_name: "public.my_trigger".into(),
+                definition: None,
+            }
+        );
+    }
+
+    #[test]
+    fn test_open_trigger_view_reuses_existing() {
+        let mut tm = TabManager::new();
+        let id1 = tm.open_trigger_view("trg".into(), None);
+        let _id2 = tm.open_sql_editor();
+        let id3 = tm.open_trigger_view("trg".into(), None);
+        assert_eq!(id1, id3);
+        assert_eq!(tm.tabs().len(), 2);
+    }
+
+    #[test]
+    fn test_open_function_view() {
+        let mut tm = TabManager::new();
+        let id = tm.open_function_view("my_func".into(), Some("public".into()));
+        let tab = tm.tab_by_id(id).unwrap();
+        assert_eq!(tab.title, "my_func");
+        assert_eq!(
+            tab.tab_type,
+            TabType::FunctionView {
+                object_name: "public.my_func".into(),
+                definition: None,
+            }
+        );
+    }
+
+    #[test]
+    fn test_open_function_view_reuses_existing() {
+        let mut tm = TabManager::new();
+        let id1 = tm.open_function_view("fn".into(), Some("public".into()));
+        let _id2 = tm.open_sql_editor();
+        let id3 = tm.open_function_view("fn".into(), Some("public".into()));
+        assert_eq!(id1, id3);
         assert_eq!(tm.tabs().len(), 2);
     }
 

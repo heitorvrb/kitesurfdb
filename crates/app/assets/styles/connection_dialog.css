@@ -68,13 +68,13 @@
     cursor: pointer;
     font-family: inherit;
     font-size: 12px;
-    background: #a6e3a1;
+    background: var(--success);
     color: var(--bg-primary);
     font-weight: 600;
 }
 
 .quick-connect-btn:hover {
-    background: #94e2d5;
+    background: var(--success-hover);
 }
 
 .delete-btn {
@@ -137,12 +137,12 @@
     font-family: inherit;
     font-size: 13px;
     font-weight: 600;
-    background: #a6e3a1;
+    background: var(--success);
     color: var(--bg-primary);
 }
 
 .connect-btn:hover {
-    background: #94e2d5;
+    background: var(--success-hover);
 }
 
 .cancel-btn {
