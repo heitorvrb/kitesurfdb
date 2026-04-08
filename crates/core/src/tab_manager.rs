@@ -138,7 +138,7 @@ impl TabManager {
         };
         let sql = format!("SELECT * FROM {quoted} LIMIT 100");
         self.open_tab(
-            qualified_name.clone(),
+            table_name,
             TabType::TableBrowser {
                 object_name: qualified_name,
                 generated_sql: sql,
@@ -277,7 +277,7 @@ mod tests {
         let mut tm = TabManager::new();
         let id = tm.open_table_browser("cliente".into(), Some("intermediam".into()));
         let tab = tm.tab_by_id(id).unwrap();
-        assert_eq!(tab.title, "intermediam.cliente");
+        assert_eq!(tab.title, "cliente");
         assert_eq!(
             tab.tab_type,
             TabType::TableBrowser {
