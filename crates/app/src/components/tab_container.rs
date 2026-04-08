@@ -1,10 +1,12 @@
 use std::sync::Arc;
 
+use app_core::config::Theme;
 use app_core::tab_manager::{TabManager, TabType};
 use db::traits::DbBackend;
 use db::types::SchemaInfo;
 use dioxus::prelude::*;
 
+use super::definition_view::DefinitionView;
 use super::sql_editor::SqlEditor;
 use super::table_browser::TableBrowser;
 
@@ -13,6 +15,7 @@ pub fn TabContainer(
     tab_manager: Signal<TabManager>,
     backend: Signal<Option<Arc<dyn DbBackend>>>,
     schema_info: Signal<Option<SchemaInfo>>,
+    theme: Signal<Theme>,
 ) -> Element {
     let active_info = {
         let tm = tab_manager.read();
@@ -29,6 +32,7 @@ pub fn TabContainer(
                     tab_manager,
                     backend,
                     schema_info,
+                    theme,
                 }
             },
             Some((id, TabType::TableBrowser { .. })) => rsx! {
@@ -38,6 +42,14 @@ pub fn TabContainer(
                     tab_manager,
                     backend,
                     schema_info,
+                }
+            },
+            Some((id, TabType::TriggerView { .. })) | Some((id, TabType::FunctionView { .. })) => rsx! {
+                DefinitionView {
+                    key: "{id}",
+                    tab_id: id,
+                    tab_manager,
+                    backend,
                 }
             },
             None => rsx! {

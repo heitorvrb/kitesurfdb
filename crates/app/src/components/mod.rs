@@ -1,5 +1,6 @@
 mod connection_bar;
 mod connection_dialog;
+pub(crate) mod definition_view;
 mod editor_area;
 pub(crate) mod results_panel;
 mod sidebar;

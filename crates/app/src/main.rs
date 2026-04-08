@@ -1,5 +1,6 @@
 mod app;
 mod components;
+mod highlight;
 
 use dioxus::desktop::{Config, WindowBuilder};
 use dioxus::desktop::tao::window::Theme;

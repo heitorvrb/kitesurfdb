@@ -139,23 +139,28 @@ User action (Run button / Ctrl+Enter / click table in sidebar)
 - [x] Connection dialog modal (add/edit/delete)
 - [x] Sidebar: saved connections list with connect/disconnect
 
-### Phase 4: SQL Editor Polish + Theming
+### Phase 4: SQL Editor Polish + Theming ✅
 **Goal:** Better editor UX, light/dark mode.
 
-- [ ] Ctrl+Enter keyboard shortcut to execute query
-- [ ] Light/dark theme CSS with toggle, persisted preference
-- [ ] Add views, triggers, functions to sidebar tree + corresponding tab types
-- [ ] SQL syntax highlighting via `syntect` (render highlighted HTML spans alongside the textarea)
+- [x] Ctrl+Enter keyboard shortcut to execute query
+- [x] Light/dark theme CSS with toggle, persisted preference
+- [x] Add views, triggers, functions to sidebar tree + corresponding tab types
+- [x] SQL syntax highlighting via `syntect` (render highlighted HTML spans alongside the textarea)
 
 ### Phase 5: Robustness + UX
 **Goal:** Production-quality error handling and polish.
 
+- [ ] Change sidebar structure: instead of tables with schemas inside, views with schemas inside, etc, have schemas as root items and then tables, views, etc. inside
 - [ ] Error display (connection failures, query errors)
 - [ ] Pagination in table browser
 - [ ] Result row limit (default 1000) with "load more"
-- [ ] Connection status indicator
-- [ ] Query execution time display
-- [ ] Status bar
+
+### Phase 6: Quality of life
+
+- [ ] F5 should refresh the results of the opened tab
+- [ ] Middle click on the tab handle should close the tab
+
+
 
 ### Future (Phase 6+)
 - Query history, CSV export, EXPLAIN visualization, MySQL backend, auto-complete from schema, table DDL viewer
