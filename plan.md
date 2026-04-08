@@ -110,34 +110,34 @@ User action (Run button / Ctrl+Enter / click table in sidebar)
 
 ## Phased Development
 
-### Phase 1: Foundation
+### Phase 1: Foundation ✅
 **Goal:** A window that connects to SQLite and runs queries.
 
-- [ ] Initialize Cargo workspace with `app`, `db`, `core` crates
-- [ ] Define `DbBackend` trait and core types (`QueryResult`, `DbValue`, `ConnectionConfig`)
-- [ ] Implement SQLite backend
-- [ ] Basic Dioxus desktop shell: single pane with `<textarea>` for SQL, Run button, HTML `<table>` for results
-- [ ] Wire up async query execution end-to-end
+- [x] Initialize Cargo workspace with `app`, `db`, `core` crates
+- [x] Define `DbBackend` trait and core types (`QueryResult`, `DbValue`, `ConnectionConfig`)
+- [x] Implement SQLite backend
+- [x] Basic Dioxus desktop shell: single pane with `<textarea>` for SQL, Run button, HTML `<table>` for results
+- [x] Wire up async query execution end-to-end
 
-### Phase 2: Tab System + Table Browser
+### Phase 2: Tab System + Table Browser ✅
 **Goal:** Multiple tabs, sidebar with schema tree, click-to-browse.
 
-- [ ] Implement `TabManager` (open/close/switch tabs)
-- [ ] Build `tab_bar` and `tab_container` components
-- [ ] Implement `introspect()` for SQLite
-- [ ] Build sidebar with collapsible object tree
-- [ ] `TableBrowser` tab type (click table -> `SELECT * FROM table LIMIT 100`)
-- [ ] SQL display strip at top of every tab
-- [ ] CancellationToken for in-flight queries on tab close
+- [x] Implement `TabManager` (open/close/switch tabs)
+- [x] Build `tab_bar` and `tab_container` components
+- [x] Implement `introspect()` for SQLite
+- [x] Build sidebar with collapsible object tree
+- [x] `TableBrowser` tab type (click table -> `SELECT * FROM table LIMIT 100`)
+- [x] SQL display strip at top of every tab
+- [x] CancellationToken for in-flight queries on tab close
 
-### Phase 3: Postgres + Connection Management
+### Phase 3: Postgres + Connection Management ✅
 **Goal:** Multi-database support with saved connections.
 
-- [ ] Implement Postgres `DbBackend` (sqlx postgres feature)
-- [ ] Implement `introspect()` for Postgres (information_schema)
-- [ ] Save/load connections to JSON config file
-- [ ] Connection dialog modal (add/edit/delete)
-- [ ] Sidebar: saved connections list with connect/disconnect
+- [x] Implement Postgres `DbBackend` (sqlx postgres feature)
+- [x] Implement `introspect()` for Postgres (information_schema)
+- [x] Save/load connections to JSON config file
+- [x] Connection dialog modal (add/edit/delete)
+- [x] Sidebar: saved connections list with connect/disconnect
 
 ### Phase 4: SQL Editor Polish + Theming
 **Goal:** Better editor UX, light/dark mode.
