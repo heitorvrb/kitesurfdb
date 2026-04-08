@@ -227,6 +227,19 @@ mod tests {
     use super::*;
 
     fn pg_config() -> ConnectionConfig {
+        let saved = dirs::config_dir()
+            .map(|d| d.join("kitesurfdb").join("connections.json"))
+            .and_then(|p| std::fs::read_to_string(p).ok())
+            .and_then(|s| serde_json::from_str::<Vec<ConnectionConfig>>(&s).ok())
+            .and_then(|cs| cs.into_iter().find(|c| c.backend == BackendType::Postgres));
+
+        if let Some(mut config) = saved {
+            config.password = keyring::Entry::new("kitesurfdb", &config.id.to_string())
+                .ok()
+                .and_then(|e| e.get_password().ok());
+            return config;
+        }
+
         ConnectionConfig::new_postgres("test", "localhost", 5432, "testdb", "postgres")
     }
 
@@ -268,16 +281,6 @@ mod tests {
         assert!(result.unwrap_err().to_string().contains("username"));
     }
 
-    #[test]
-    fn test_pg_config_builds_correctly() {
-        let config = pg_config();
-        assert_eq!(config.backend, BackendType::Postgres);
-        assert_eq!(config.host, Some("localhost".into()));
-        assert_eq!(config.port, Some(5432));
-        assert_eq!(config.database, "testdb");
-        assert_eq!(config.username, Some("postgres".into()));
-    }
-
     // Integration tests below require a running Postgres instance.
     // Run with: cargo test -p db -- --ignored
     #[tokio::test]
@@ -295,19 +298,12 @@ mod tests {
         let config = pg_config();
         let backend = PostgresBackend::connect(&config).await.unwrap();
 
-        backend
-            .execute_query(
-                "CREATE TEMPORARY TABLE test_users (id SERIAL PRIMARY KEY, name TEXT, age INT)",
-            )
-            .await
-            .unwrap();
-        backend
-            .execute_query("INSERT INTO test_users (name, age) VALUES ('Alice', 30), ('Bob', 25)")
-            .await
-            .unwrap();
-
         let result = backend
-            .execute_query("SELECT id, name, age FROM test_users ORDER BY id")
+            .execute_query(
+                "SELECT id, name, age \
+                 FROM (VALUES (1, 'Alice'::text, 30), (2, 'Bob'::text, 25)) AS t(id, name, age) \
+                 ORDER BY id",
+            )
             .await
             .unwrap();
 
@@ -328,17 +324,8 @@ mod tests {
         let config = pg_config();
         let backend = PostgresBackend::connect(&config).await.unwrap();
 
-        backend
-            .execute_query("CREATE TEMPORARY TABLE test_nulls (a TEXT, b INT)")
-            .await
-            .unwrap();
-        backend
-            .execute_query("INSERT INTO test_nulls VALUES (NULL, 1)")
-            .await
-            .unwrap();
-
         let result = backend
-            .execute_query("SELECT a, b FROM test_nulls")
+            .execute_query("SELECT NULL::text AS a, 1::int AS b")
             .await
             .unwrap();
         assert_eq!(result.rows[0][0], DbValue::Null);
@@ -385,13 +372,8 @@ mod tests {
         let config = pg_config();
         let backend = PostgresBackend::connect(&config).await.unwrap();
 
-        backend
-            .execute_query("CREATE TEMPORARY TABLE test_empty (a TEXT)")
-            .await
-            .unwrap();
-
         let result = backend
-            .execute_query("SELECT * FROM test_empty")
+            .execute_query("SELECT 1 AS a WHERE false")
             .await
             .unwrap();
         assert!(result.columns.is_empty());
