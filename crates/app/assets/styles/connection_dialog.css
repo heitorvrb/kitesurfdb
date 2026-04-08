@@ -1,0 +1,161 @@
+/* Dialog overlay */
+.dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+}
+
+.dialog {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    min-width: 420px;
+    max-width: 520px;
+    max-height: 80vh;
+    overflow-y: auto;
+    color: var(--text-primary);
+}
+
+.dialog h2 {
+    margin: 0 0 16px 0;
+    font-size: 18px;
+}
+
+.dialog h3 {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+/* Saved connections */
+.saved-connections {
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.saved-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    margin-bottom: 4px;
+}
+
+.saved-item:hover {
+    background: var(--bg-primary);
+}
+
+.saved-item span {
+    flex: 1;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.quick-connect-btn {
+    padding: 2px 8px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 12px;
+    background: #a6e3a1;
+    color: var(--bg-primary);
+    font-weight: 600;
+}
+
+.quick-connect-btn:hover {
+    background: #94e2d5;
+}
+
+.delete-btn {
+    padding: 2px 6px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 12px;
+    background: transparent;
+    color: var(--text-secondary);
+}
+
+.delete-btn:hover {
+    background: var(--error);
+    color: var(--bg-primary);
+}
+
+/* Form fields */
+.connection-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.field label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.field input, .field select {
+    padding: 6px 8px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 13px;
+}
+
+.dialog-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    justify-content: flex-end;
+}
+
+.connect-btn {
+    padding: 4px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    background: #a6e3a1;
+    color: var(--bg-primary);
+}
+
+.connect-btn:hover {
+    background: #94e2d5;
+}
+
+.cancel-btn {
+    padding: 4px 12px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.cancel-btn:hover {
+    background: var(--bg-primary);
+}

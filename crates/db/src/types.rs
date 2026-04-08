@@ -118,11 +118,21 @@ pub enum ObjectType {
     Function,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct DbObject {
     pub name: String,
     pub object_type: ObjectType,
     pub schema: Option<String>,
+}
+
+impl DbObject {
+    /// Returns `"schema"."name"` if schema is present, otherwise `"name"`.
+    pub fn quoted_qualified_name(&self) -> String {
+        match &self.schema {
+            Some(s) => format!("\"{s}\".\"{}\"", self.name),
+            None => format!("\"{}\"", self.name),
+        }
+    }
 }
 
 #[cfg(test)]

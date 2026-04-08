@@ -19,21 +19,6 @@
     flex: 1;
 }
 
-.db-path-input {
-    flex: 1;
-    padding: 4px 8px;
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    font-family: inherit;
-    font-size: 13px;
-}
-
-.db-path-input:disabled {
-    opacity: 0.6;
-}
-
 .connect-btn, .disconnect-btn {
     padding: 4px 12px;
     border: none;
