@@ -117,22 +117,30 @@ impl TabManager {
         )
     }
 
-    pub fn open_table_browser(&mut self, table_name: String) -> Uuid {
+    pub fn open_table_browser(&mut self, table_name: String, schema: Option<String>) -> Uuid {
+        let qualified_name = match &schema {
+            Some(s) => format!("{s}.{table_name}"),
+            None => table_name.clone(),
+        };
+
         // If a tab for this table already exists, just activate it
         if let Some(existing) = self.tabs.iter().find(|t| {
-            matches!(&t.tab_type, TabType::TableBrowser { object_name, .. } if object_name == &table_name)
+            matches!(&t.tab_type, TabType::TableBrowser { object_name, .. } if object_name == &qualified_name)
         }) {
             let id = existing.id;
             self.active_tab_id = Some(id);
             return id;
         }
 
-        let sql = format!("SELECT * FROM \"{table_name}\" LIMIT 100");
-        let title = table_name.clone();
+        let quoted = match &schema {
+            Some(s) => format!("\"{s}\".\"{table_name}\""),
+            None => format!("\"{table_name}\""),
+        };
+        let sql = format!("SELECT * FROM {quoted} LIMIT 100");
         self.open_tab(
-            title,
+            qualified_name.clone(),
             TabType::TableBrowser {
-                object_name: table_name,
+                object_name: qualified_name,
                 generated_sql: sql,
             },
         )
@@ -252,7 +260,7 @@ mod tests {
     #[test]
     fn test_open_table_browser() {
         let mut tm = TabManager::new();
-        let id = tm.open_table_browser("users".into());
+        let id = tm.open_table_browser("users".into(), None);
         let tab = tm.tab_by_id(id).unwrap();
         assert_eq!(tab.title, "users");
         assert_eq!(
@@ -265,22 +273,46 @@ mod tests {
     }
 
     #[test]
+    fn test_open_table_browser_with_schema() {
+        let mut tm = TabManager::new();
+        let id = tm.open_table_browser("cliente".into(), Some("intermediam".into()));
+        let tab = tm.tab_by_id(id).unwrap();
+        assert_eq!(tab.title, "intermediam.cliente");
+        assert_eq!(
+            tab.tab_type,
+            TabType::TableBrowser {
+                object_name: "intermediam.cliente".into(),
+                generated_sql: "SELECT * FROM \"intermediam\".\"cliente\" LIMIT 100".into(),
+            }
+        );
+    }
+
+    #[test]
     fn test_open_table_browser_reuses_existing_tab() {
         let mut tm = TabManager::new();
-        let id1 = tm.open_table_browser("users".into());
+        let id1 = tm.open_table_browser("users".into(), None);
         let id_other = tm.open_sql_editor();
         assert_eq!(tm.active_tab_id(), Some(id_other));
 
         // Opening the same table again should reuse the existing tab
-        let id2 = tm.open_table_browser("users".into());
+        let id2 = tm.open_table_browser("users".into(), None);
         assert_eq!(id1, id2);
         assert_eq!(tm.active_tab_id(), Some(id1));
         assert_eq!(tm.tabs().len(), 2); // not 3
 
         // Different table should open a new tab
-        let id3 = tm.open_table_browser("orders".into());
+        let id3 = tm.open_table_browser("orders".into(), None);
         assert_ne!(id1, id3);
         assert_eq!(tm.tabs().len(), 3);
+    }
+
+    #[test]
+    fn test_open_table_browser_same_name_different_schema() {
+        let mut tm = TabManager::new();
+        let id1 = tm.open_table_browser("users".into(), Some("public".into()));
+        let id2 = tm.open_table_browser("users".into(), Some("audit".into()));
+        assert_ne!(id1, id2);
+        assert_eq!(tm.tabs().len(), 2);
     }
 
     #[test]

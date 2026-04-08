@@ -1,9 +1,10 @@
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use app_core::connection_manager::ConnectionManager;
 use app_core::tab_manager::TabManager;
 use db::traits::DbBackend;
-use db::types::SchemaInfo;
+use db::types::{DbObject, SchemaInfo};
 use dioxus::prelude::*;
 
 #[css_module("/assets/styles/sidebar.css")]
@@ -50,7 +51,7 @@ pub fn Sidebar(
                         title: "Tables",
                         expanded: tables_expanded,
                         on_toggle: move |_| tables_expanded.toggle(),
-                        objects: schema.tables.iter().map(|o| o.name.clone()).collect(),
+                        objects: schema.tables.clone(),
                         tab_manager,
                     }
                 }
@@ -59,7 +60,7 @@ pub fn Sidebar(
                         title: "Views",
                         expanded: views_expanded,
                         on_toggle: move |_| views_expanded.toggle(),
-                        objects: schema.views.iter().map(|o| o.name.clone()).collect(),
+                        objects: schema.views.clone(),
                         tab_manager,
                     }
                 }
@@ -68,7 +69,7 @@ pub fn Sidebar(
                         title: "Triggers",
                         expanded: triggers_expanded,
                         on_toggle: move |_| triggers_expanded.toggle(),
-                        objects: schema.triggers.iter().map(|o| o.name.clone()).collect(),
+                        objects: schema.triggers.clone(),
                         tab_manager,
                     }
                 }
@@ -82,14 +83,29 @@ pub fn Sidebar(
     }
 }
 
+/// Group objects by schema. Returns (schema_name, objects) pairs sorted by schema.
+/// Objects without a schema use "" as the key.
+fn group_by_schema(objects: &[DbObject]) -> Vec<(String, Vec<DbObject>)> {
+    let mut groups: BTreeMap<String, Vec<DbObject>> = BTreeMap::new();
+    for obj in objects {
+        let key = obj.schema.clone().unwrap_or_default();
+        groups.entry(key).or_default().push(obj.clone());
+    }
+    groups.into_iter().collect()
+}
+
 #[component]
 fn ObjectSection(
     title: &'static str,
     expanded: Signal<bool>,
     on_toggle: EventHandler<()>,
-    objects: Vec<String>,
+    objects: Vec<DbObject>,
     tab_manager: Signal<TabManager>,
 ) -> Element {
+    let has_schemas = objects.iter().any(|o| o.schema.is_some());
+    let groups = group_by_schema(&objects);
+    let total = objects.len();
+
     rsx! {
         div {
             div {
@@ -98,19 +114,68 @@ fn ObjectSection(
                 span { class: Styles::toggle,
                     if *expanded.read() { "v" } else { ">" }
                 }
-                "{title} ({objects.len()})"
+                "{title} ({total})"
             }
             if *expanded.read() {
-                for name in &objects {
+                if has_schemas {
+                    for (schema_name, schema_objects) in &groups {
+                        SchemaGroup {
+                            schema_name: schema_name.clone(),
+                            objects: schema_objects.clone(),
+                            tab_manager,
+                        }
+                    }
+                } else {
+                    for obj in &objects {
+                        {
+                            let name = obj.name.clone();
+                            rsx! {
+                                div {
+                                    class: Styles::object_item,
+                                    onclick: move |_| {
+                                        tab_manager.write().open_table_browser(name.clone(), None);
+                                    },
+                                    "{obj.name}"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[component]
+fn SchemaGroup(
+    schema_name: String,
+    objects: Vec<DbObject>,
+    tab_manager: Signal<TabManager>,
+) -> Element {
+    let mut expanded = use_signal(|| true);
+
+    rsx! {
+        div {
+            div {
+                class: Styles::schema_header,
+                onclick: move |_| expanded.toggle(),
+                span { class: Styles::toggle,
+                    if *expanded.read() { "v" } else { ">" }
+                }
+                "{schema_name} ({objects.len()})"
+            }
+            if *expanded.read() {
+                for obj in &objects {
                     {
-                        let name_clone = name.clone();
+                        let name = obj.name.clone();
+                        let schema = obj.schema.clone();
                         rsx! {
                             div {
-                                class: Styles::object_item,
+                                class: Styles::schema_object_item,
                                 onclick: move |_| {
-                                    tab_manager.write().open_table_browser(name_clone.clone());
+                                    tab_manager.write().open_table_browser(name.clone(), schema.clone());
                                 },
-                                "{name}"
+                                "{obj.name}"
                             }
                         }
                     }
