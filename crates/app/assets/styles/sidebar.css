@@ -81,3 +81,33 @@
     background: var(--bg-tertiary);
     color: var(--accent);
 }
+
+.schema-header {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 12px 4px 20px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    user-select: none;
+}
+
+.schema-header:hover {
+    background: var(--bg-tertiary);
+}
+
+.schema-object-item {
+    padding: 4px 12px 4px 40px;
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.schema-object-item:hover {
+    background: var(--bg-tertiary);
+    color: var(--accent);
+}

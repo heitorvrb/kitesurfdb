@@ -1,4 +1,5 @@
 mod connection_bar;
+mod connection_dialog;
 mod editor_area;
 pub(crate) mod results_panel;
 mod sidebar;

@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
+use app_core::connection_manager::ConnectionManager;
 use app_core::tab_manager::TabManager;
-use db::sqlite::SqliteBackend;
+use db::traits::DbBackend;
 use db::types::SchemaInfo;
 use dioxus::prelude::*;
 
@@ -12,10 +13,11 @@ struct Styles;
 
 #[component]
 pub fn App() -> Element {
-    let backend: Signal<Option<Arc<SqliteBackend>>> = use_signal(|| None);
+    let backend: Signal<Option<Arc<dyn DbBackend>>> = use_signal(|| None);
     let is_connected = use_signal(|| false);
     let tab_manager: Signal<TabManager> = use_signal(TabManager::new);
     let schema_info: Signal<Option<SchemaInfo>> = use_signal(|| None);
+    let connection_manager: Signal<ConnectionManager> = use_signal(ConnectionManager::new);
 
     rsx! {
         div { class: Styles::app,
@@ -24,6 +26,7 @@ pub fn App() -> Element {
                 is_connected,
                 tab_manager,
                 schema_info,
+                connection_manager,
             }
             div { class: Styles::main_layout,
                 Sidebar {
@@ -31,9 +34,10 @@ pub fn App() -> Element {
                     tab_manager,
                     is_connected,
                     backend,
+                    connection_manager,
                 }
                 EditorArea {
-                  tab_manager, 
+                  tab_manager,
                   backend,
                   schema_info
                 }
