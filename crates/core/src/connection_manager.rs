@@ -65,6 +65,40 @@ impl ConnectionManager {
         self.connections.iter().find(|c| c.id == id)
     }
 
+    /// Get a cloned connection config with password loaded from keyring.
+    pub fn get_connect_config(&self, id: Uuid) -> Result<ConnectionConfig, DbError> {
+        let config = self
+            .connections
+            .iter()
+            .find(|c| c.id == id)
+            .ok_or_else(|| DbError::ConnectionFailed("Connection not found".into()))?;
+        let mut config = config.clone();
+        if config.password.is_none() {
+            config.password = config::get_password(&config.id.to_string());
+        }
+        Ok(config)
+    }
+
+    /// Create a backend from a config without requiring &mut self.
+    pub async fn create_backend(config: &ConnectionConfig) -> Result<Arc<dyn DbBackend>, DbError> {
+        match config.backend {
+            BackendType::Sqlite => Ok(Arc::new(SqliteBackend::connect(config).await?)),
+            BackendType::Postgres => Ok(Arc::new(PostgresBackend::connect(config).await?)),
+        }
+    }
+
+    /// Store the active connection state after a successful connect.
+    pub fn set_connected(&mut self, id: Uuid, backend: Arc<dyn DbBackend>) {
+        self.active_connection_id = Some(id);
+        self.active_backend = Some(backend);
+    }
+
+    /// Take the active backend, clearing active connection state.
+    pub fn take_active(&mut self) -> Option<Arc<dyn DbBackend>> {
+        self.active_connection_id = None;
+        self.active_backend.take()
+    }
+
     pub async fn connect(&mut self, id: Uuid) -> Result<Arc<dyn DbBackend>, DbError> {
         // Disconnect existing connection if any
         if self.active_backend.is_some() {
