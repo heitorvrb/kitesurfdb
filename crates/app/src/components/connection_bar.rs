@@ -27,13 +27,14 @@ pub fn ConnectionBar(
     let disconnect = move |_| {
         let mut backend = backend;
         spawn(async move {
-            if let Some(b) = backend.read().as_ref() {
+            // Take active backend (quick write, released before await)
+            let prev = connection_manager.write().take_active();
+            if let Some(b) = prev {
                 let _ = b.disconnect().await;
             }
             backend.set(None);
             is_connected.set(false);
             schema_info.set(None);
-            connection_manager.write().disconnect().await.ok();
             let ids: Vec<_> = tab_manager.read().tabs().iter().map(|t| t.id).collect();
             for id in ids {
                 tab_manager.write().close_tab(id);
@@ -141,27 +142,36 @@ fn ConnectionDialog(
                 config.password = Some(pass_val);
             }
 
-            // If editing, preserve the ID
-            if let Some(id) = edit_id {
+            // Save connection and capture its ID before moving config
+            let id = if let Some(id) = edit_id {
                 config.id = id;
                 connection_manager.write().update_connection(config);
-            } else {
-                connection_manager.write().add_connection(config);
-            }
-
-            let id = if let Some(id) = edit_id {
                 id
             } else {
-                connection_manager
-                    .read()
-                    .connections()
-                    .last()
-                    .map(|c| c.id)
-                    .unwrap()
+                let id = config.id;
+                connection_manager.write().add_connection(config);
+                id
             };
 
-            match connection_manager.write().connect(id).await {
+            // Disconnect previous (quick write, released before await)
+            let prev = connection_manager.write().take_active();
+            if let Some(b) = prev {
+                let _ = b.disconnect().await;
+            }
+
+            // Get config with password (quick read, released before await)
+            let connect_config = match connection_manager.read().get_connect_config(id) {
+                Ok(c) => c,
+                Err(e) => {
+                    connection_error.set(Some(e.to_string()));
+                    return;
+                }
+            };
+
+            // Async connect — no signal borrow held
+            match ConnectionManager::create_backend(&connect_config).await {
                 Ok(b) => {
+                    connection_manager.write().set_connected(id, b.clone());
                     match b.introspect().await {
                         Ok(info) => schema_info.set(Some(info)),
                         Err(_) => schema_info.set(None),
@@ -204,8 +214,26 @@ fn ConnectionDialog(
         let mut backend = backend;
         spawn(async move {
             connection_error.set(None);
-            match connection_manager.write().connect(id).await {
+
+            // Disconnect previous (quick write, released before await)
+            let prev = connection_manager.write().take_active();
+            if let Some(b) = prev {
+                let _ = b.disconnect().await;
+            }
+
+            // Get config with password (quick read, released before await)
+            let connect_config = match connection_manager.read().get_connect_config(id) {
+                Ok(c) => c,
+                Err(e) => {
+                    connection_error.set(Some(e.to_string()));
+                    return;
+                }
+            };
+
+            // Async connect — no signal borrow held
+            match ConnectionManager::create_backend(&connect_config).await {
                 Ok(b) => {
+                    connection_manager.write().set_connected(id, b.clone());
                     match b.introspect().await {
                         Ok(info) => schema_info.set(Some(info)),
                         Err(_) => schema_info.set(None),
