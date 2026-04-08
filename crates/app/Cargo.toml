@@ -8,6 +8,7 @@ app-core = { path = "../core", package = "core" }
 dark-light = "2.0.0"
 db = { path = "../db" }
 dioxus = { version = "0.7", features = ["desktop"] }
+syntect = { version = "5", default-features = false, features = ["default-syntaxes", "default-themes", "html", "regex-onig"] }
 tokio = { version = "1", features = ["full"] }
 tokio-util = "0.7"
 uuid = { version = "1", features = ["v4"] }
