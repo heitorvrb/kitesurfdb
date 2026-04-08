@@ -80,6 +80,69 @@ impl DbBackend for PostgresBackend {
         })
     }
 
+    async fn get_object_definition(
+        &self,
+        name: &str,
+        schema: Option<&str>,
+        object_type: &ObjectType,
+    ) -> Result<String, DbError> {
+        let schema = schema.unwrap_or("public");
+        match object_type {
+            ObjectType::Trigger => {
+                let sql = "SELECT pg_get_triggerdef(t.oid, true) AS definition \
+                           FROM pg_trigger t \
+                           JOIN pg_class c ON t.tgrelid = c.oid \
+                           JOIN pg_namespace n ON c.relnamespace = n.oid \
+                           WHERE t.tgname = $1 AND n.nspname = $2 \
+                           LIMIT 1";
+                let row: Option<PgRow> = sqlx::query(sql)
+                    .bind(name)
+                    .bind(schema)
+                    .fetch_optional(&self.pool)
+                    .await?;
+                match row {
+                    Some(row) => Ok(row.get::<String, _>("definition")),
+                    None => Err(DbError::QueryFailed(format!("Trigger '{name}' not found"))),
+                }
+            }
+            ObjectType::Function => {
+                let sql = "SELECT pg_get_functiondef(p.oid) AS definition \
+                           FROM pg_proc p \
+                           JOIN pg_namespace n ON p.pronamespace = n.oid \
+                           WHERE p.proname = $1 AND n.nspname = $2 \
+                           LIMIT 1";
+                let row: Option<PgRow> = sqlx::query(sql)
+                    .bind(name)
+                    .bind(schema)
+                    .fetch_optional(&self.pool)
+                    .await?;
+                match row {
+                    Some(row) => Ok(row.get::<String, _>("definition")),
+                    None => Err(DbError::QueryFailed(format!("Function '{name}' not found"))),
+                }
+            }
+            ObjectType::View => {
+                let sql = "SELECT pg_get_viewdef(c.oid, true) AS definition \
+                           FROM pg_class c \
+                           JOIN pg_namespace n ON c.relnamespace = n.oid \
+                           WHERE c.relname = $1 AND n.nspname = $2 AND c.relkind = 'v' \
+                           LIMIT 1";
+                let row: Option<PgRow> = sqlx::query(sql)
+                    .bind(name)
+                    .bind(schema)
+                    .fetch_optional(&self.pool)
+                    .await?;
+                match row {
+                    Some(row) => Ok(row.get::<String, _>("definition")),
+                    None => Err(DbError::QueryFailed(format!("View '{name}' not found"))),
+                }
+            }
+            ObjectType::Table => {
+                Err(DbError::QueryFailed("Tables do not have a SQL definition".into()))
+            }
+        }
+    }
+
     async fn introspect(&self) -> Result<SchemaInfo, DbError> {
         let tables = self.query_objects("BASE TABLE", ObjectType::Table).await?;
         let views = self.query_objects("VIEW", ObjectType::View).await?;

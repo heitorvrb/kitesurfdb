@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use app_core::config::{self, Theme};
 use app_core::connection_manager::ConnectionManager;
 use app_core::tab_manager::TabManager;
 use db::traits::DbBackend;
@@ -18,11 +19,13 @@ pub fn ConnectionBar(
     tab_manager: Signal<TabManager>,
     schema_info: Signal<Option<SchemaInfo>>,
     connection_manager: Signal<ConnectionManager>,
+    theme: Signal<Theme>,
 ) -> Element {
     let connection_error: Signal<Option<String>> = use_signal(|| None);
     let mut is_connected = is_connected;
     let mut schema_info = schema_info;
     let mut tab_manager = tab_manager;
+    let mut theme = theme;
     let mut show_dialog = use_signal(|| false);
 
     let disconnect = move |_| {
@@ -50,9 +53,22 @@ pub fn ConnectionBar(
         })
     };
 
+    let is_dark = *theme.read() == Theme::Dark;
+
     rsx! {
         header { class: Styles::toolbar,
             h1 { "Kitesurf" }
+            button {
+                class: Styles::theme_btn,
+                onclick: move |_| {
+                    let new_theme = theme.read().toggle();
+                    theme.set(new_theme);
+                    let mut prefs = config::load_preferences();
+                    prefs.theme = new_theme;
+                    let _ = config::save_preferences(&prefs);
+                },
+                if is_dark { "Light" } else { "Dark" }
+            }
             div { class: Styles::connection_bar,
                 if *is_connected.read() {
                     span { class: "{Styles::status} {Styles::connected}",

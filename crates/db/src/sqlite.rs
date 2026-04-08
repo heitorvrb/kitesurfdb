@@ -65,6 +65,27 @@ impl DbBackend for SqliteBackend {
         })
     }
 
+    async fn get_object_definition(
+        &self,
+        name: &str,
+        _schema: Option<&str>,
+        _object_type: &ObjectType,
+    ) -> Result<String, DbError> {
+        let sql = "SELECT sql FROM sqlite_master WHERE name = ?";
+        let row: Option<sqlx::sqlite::SqliteRow> = sqlx::query(sql)
+            .bind(name)
+            .fetch_optional(&self.pool)
+            .await?;
+
+        match row {
+            Some(row) => {
+                let definition: Option<String> = row.get("sql");
+                Ok(definition.unwrap_or_else(|| "-- No definition available".into()))
+            }
+            None => Err(DbError::QueryFailed(format!("Object '{name}' not found"))),
+        }
+    }
+
     async fn introspect(&self) -> Result<SchemaInfo, DbError> {
         let tables = self.query_objects("table").await?;
         let views = self.query_objects("view").await?;
@@ -286,6 +307,62 @@ mod tests {
         assert_eq!(schema.views[0].object_type, ObjectType::View);
 
         assert!(schema.functions.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_get_trigger_definition() {
+        let config = sqlite_config(":memory:");
+        let backend = SqliteBackend::connect(&config).await.unwrap();
+
+        backend
+            .execute_query("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)")
+            .await
+            .unwrap();
+        backend
+            .execute_query(
+                "CREATE TRIGGER trg_users AFTER INSERT ON users BEGIN SELECT 1; END",
+            )
+            .await
+            .unwrap();
+
+        let def = backend
+            .get_object_definition("trg_users", None, &ObjectType::Trigger)
+            .await
+            .unwrap();
+        assert!(def.contains("trg_users"));
+        assert!(def.contains("TRIGGER"));
+    }
+
+    #[tokio::test]
+    async fn test_get_view_definition() {
+        let config = sqlite_config(":memory:");
+        let backend = SqliteBackend::connect(&config).await.unwrap();
+
+        backend
+            .execute_query("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)")
+            .await
+            .unwrap();
+        backend
+            .execute_query("CREATE VIEW v_users AS SELECT * FROM users")
+            .await
+            .unwrap();
+
+        let def = backend
+            .get_object_definition("v_users", None, &ObjectType::View)
+            .await
+            .unwrap();
+        assert!(def.contains("v_users"));
+    }
+
+    #[tokio::test]
+    async fn test_get_definition_not_found() {
+        let config = sqlite_config(":memory:");
+        let backend = SqliteBackend::connect(&config).await.unwrap();
+
+        let result = backend
+            .get_object_definition("nonexistent", None, &ObjectType::Trigger)
+            .await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]

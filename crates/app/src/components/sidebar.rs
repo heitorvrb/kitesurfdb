@@ -4,7 +4,7 @@ use std::sync::Arc;
 use app_core::connection_manager::ConnectionManager;
 use app_core::tab_manager::TabManager;
 use db::traits::DbBackend;
-use db::types::{DbObject, SchemaInfo};
+use db::types::{DbObject, ObjectType, SchemaInfo};
 use dioxus::prelude::*;
 
 #[css_module("/assets/styles/sidebar.css")]
@@ -21,6 +21,7 @@ pub fn Sidebar(
     let mut tables_expanded = use_signal(|| true);
     let mut views_expanded = use_signal(|| true);
     let mut triggers_expanded = use_signal(|| true);
+    let mut functions_expanded = use_signal(|| true);
     let mut schema_info = schema_info;
 
     let refresh = move |_| {
@@ -73,7 +74,16 @@ pub fn Sidebar(
                         tab_manager,
                     }
                 }
-                if schema.tables.is_empty() && schema.views.is_empty() && schema.triggers.is_empty() {
+                if !schema.functions.is_empty() {
+                    ObjectSection {
+                        title: "Functions",
+                        expanded: functions_expanded,
+                        on_toggle: move |_| functions_expanded.toggle(),
+                        objects: schema.functions.clone(),
+                        tab_manager,
+                    }
+                }
+                if schema.tables.is_empty() && schema.views.is_empty() && schema.triggers.is_empty() && schema.functions.is_empty() {
                     div { class: Styles::sidebar_empty, "No schema objects found" }
                 }
             } else {
@@ -92,6 +102,20 @@ fn group_by_schema(objects: &[DbObject]) -> Vec<(String, Vec<DbObject>)> {
         groups.entry(key).or_default().push(obj.clone());
     }
     groups.into_iter().collect()
+}
+
+fn open_object_tab(tab_manager: &mut TabManager, obj: &DbObject) {
+    match obj.object_type {
+        ObjectType::Table | ObjectType::View => {
+            tab_manager.open_table_browser(obj.name.clone(), obj.schema.clone());
+        }
+        ObjectType::Trigger => {
+            tab_manager.open_trigger_view(obj.name.clone(), obj.schema.clone());
+        }
+        ObjectType::Function => {
+            tab_manager.open_function_view(obj.name.clone(), obj.schema.clone());
+        }
+    }
 }
 
 #[component]
@@ -128,12 +152,12 @@ fn ObjectSection(
                 } else {
                     for obj in &objects {
                         {
-                            let name = obj.name.clone();
+                            let obj_clone = obj.clone();
                             rsx! {
                                 div {
                                     class: Styles::object_item,
                                     onclick: move |_| {
-                                        tab_manager.write().open_table_browser(name.clone(), None);
+                                        open_object_tab(&mut tab_manager.write(), &obj_clone);
                                     },
                                     "{obj.name}"
                                 }
@@ -167,13 +191,12 @@ fn SchemaGroup(
             if *expanded.read() {
                 for obj in &objects {
                     {
-                        let name = obj.name.clone();
-                        let schema = obj.schema.clone();
+                        let obj_clone = obj.clone();
                         rsx! {
                             div {
                                 class: Styles::schema_object_item,
                                 onclick: move |_| {
-                                    tab_manager.write().open_table_browser(name.clone(), schema.clone());
+                                    open_object_tab(&mut tab_manager.write(), &obj_clone);
                                 },
                                 "{obj.name}"
                             }

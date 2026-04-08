@@ -1,14 +1,17 @@
 mod app;
 mod components;
+mod highlight;
 
+use app_core::config;
 use dioxus::desktop::{Config, WindowBuilder};
 use dioxus::desktop::tao::window::Theme;
 use dioxus::prelude::*;
 
 fn main() {
-    let theme = match dark_light::detect() {
-        Ok(dark_light::Mode::Dark) => Theme::Dark,
-        _ => Theme::Light,
+    let prefs = config::load_preferences();
+    let theme = match prefs.theme {
+        config::Theme::Dark => Theme::Dark,
+        config::Theme::Light => Theme::Light,
     };
 
     LaunchBuilder::desktop()
