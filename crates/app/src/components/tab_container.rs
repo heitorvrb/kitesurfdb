@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use app_core::tab_manager::{TabManager, TabType};
-use db::sqlite::SqliteBackend;
+use db::traits::DbBackend;
 use db::types::SchemaInfo;
 use dioxus::prelude::*;
 
@@ -11,7 +11,7 @@ use super::table_browser::TableBrowser;
 #[component]
 pub fn TabContainer(
     tab_manager: Signal<TabManager>,
-    backend: Signal<Option<Arc<SqliteBackend>>>,
+    backend: Signal<Option<Arc<dyn DbBackend>>>,
     schema_info: Signal<Option<SchemaInfo>>,
 ) -> Element {
     let active_info = {

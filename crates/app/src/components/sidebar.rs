@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
+use app_core::connection_manager::ConnectionManager;
 use app_core::tab_manager::TabManager;
-use db::sqlite::SqliteBackend;
 use db::traits::DbBackend;
 use db::types::SchemaInfo;
 use dioxus::prelude::*;
@@ -14,7 +14,8 @@ pub fn Sidebar(
     schema_info: Signal<Option<SchemaInfo>>,
     tab_manager: Signal<TabManager>,
     is_connected: Signal<bool>,
-    backend: Signal<Option<Arc<SqliteBackend>>>,
+    backend: Signal<Option<Arc<dyn DbBackend>>>,
+    connection_manager: Signal<ConnectionManager>,
 ) -> Element {
     let mut tables_expanded = use_signal(|| true);
     let mut views_expanded = use_signal(|| true);

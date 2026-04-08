@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use app_core::tab_manager::TabManager;
-use db::sqlite::SqliteBackend;
+use db::traits::DbBackend;
 use db::types::SchemaInfo;
 use dioxus::prelude::*;
 
@@ -14,7 +14,7 @@ struct Styles;
 #[component]
 pub fn EditorArea(
     tab_manager: Signal<TabManager>,
-    backend: Signal<Option<Arc<SqliteBackend>>>,
+    backend: Signal<Option<Arc<dyn DbBackend>>>,
     schema_info: Signal<Option<SchemaInfo>>,
 ) -> Element {
     rsx! {
