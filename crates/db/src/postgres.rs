@@ -137,9 +137,9 @@ impl DbBackend for PostgresBackend {
                     None => Err(DbError::QueryFailed(format!("View '{name}' not found"))),
                 }
             }
-            ObjectType::Table => {
-                Err(DbError::QueryFailed("Tables do not have a SQL definition".into()))
-            }
+            ObjectType::Table => Err(DbError::QueryFailed(
+                "Tables do not have a SQL definition".into(),
+            )),
         }
     }
 
@@ -441,6 +441,63 @@ mod tests {
             .unwrap();
         assert!(result.columns.is_empty());
         assert!(result.rows.is_empty());
+
+        backend.disconnect().await.unwrap();
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_create_table() {
+        let config = pg_config();
+        let backend = PostgresBackend::connect(&config).await.unwrap();
+
+        let result = backend
+            .execute_query(
+                "CREATE TABLE test_automated_users (
+                    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    age INTEGER CHECK (age >= 0)
+                );",
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(result.rows_affected, 0);
+
+        let insert_result = backend
+            .execute_query(
+                "INSERT INTO test_automated_users (name, age) VALUES ('Alice', 30), ('Bob', 25);",
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(insert_result.rows_affected, 0);
+
+        let select_result = backend
+            .execute_query("SELECT * FROM test_automated_users ORDER BY id")
+            .await
+            .unwrap();
+
+        assert_eq!(select_result.rows.len(), 2);
+        assert_eq!(select_result.rows[0][1], DbValue::Text("Alice".into()));
+        assert_eq!(select_result.rows[0][2], DbValue::Int(30));
+        assert_eq!(select_result.rows[1][1], DbValue::Text("Bob".into()));
+        assert_eq!(select_result.rows[1][2], DbValue::Int(25));
+
+        let incorrect_insert_result = backend
+            .execute_query(
+                "INSERT INTO test_automated_users (name, age) VALUES ('Invalid Age', -1);",
+            )
+            .await;
+
+        assert!(incorrect_insert_result.is_err());
+
+        let delete_result = backend
+            .execute_query("DROP TABLE test_automated_users;")
+            .await
+            .unwrap();
+
+        assert_eq!(delete_result.rows_affected, 0);
 
         backend.disconnect().await.unwrap();
     }
