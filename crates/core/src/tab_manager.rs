@@ -275,14 +275,14 @@ mod tests {
     #[test]
     fn test_open_table_browser_with_schema() {
         let mut tm = TabManager::new();
-        let id = tm.open_table_browser("cliente".into(), Some("intermediam".into()));
+        let id = tm.open_table_browser("user".into(), Some("testschema".into()));
         let tab = tm.tab_by_id(id).unwrap();
-        assert_eq!(tab.title, "cliente");
+        assert_eq!(tab.title, "user");
         assert_eq!(
             tab.tab_type,
             TabType::TableBrowser {
-                object_name: "intermediam.cliente".into(),
-                generated_sql: "SELECT * FROM \"intermediam\".\"cliente\" LIMIT 100".into(),
+                object_name: "testschema.user".into(),
+                generated_sql: "SELECT * FROM \"testschema\".\"user\" LIMIT 100".into(),
             }
         );
     }
