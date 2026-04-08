@@ -150,12 +150,17 @@ User action (Run button / Ctrl+Enter / click table in sidebar)
 ### Phase 5: Robustness + UX
 **Goal:** Production-quality error handling and polish.
 
+- [ ] Change sidebar structure: instead of tables with schemas inside, views with schemas inside, etc, have schemas as root items and then tables, views, etc. inside
 - [ ] Error display (connection failures, query errors)
 - [ ] Pagination in table browser
 - [ ] Result row limit (default 1000) with "load more"
-- [ ] Connection status indicator
-- [ ] Query execution time display
-- [ ] Status bar
+
+### Phase 6: Quality of life
+
+- [ ] F5 should refresh the results of the opened tab
+- [ ] Middle click on the tab handle should close the tab
+
+
 
 ### Future (Phase 6+)
 - Query history, CSV export, EXPLAIN visualization, MySQL backend, auto-complete from schema, table DDL viewer
