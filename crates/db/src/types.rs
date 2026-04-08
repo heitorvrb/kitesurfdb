@@ -133,14 +133,6 @@ impl DbObject {
             None => format!("\"{}\"", self.name),
         }
     }
-
-    /// Returns `schema.name` if schema is present, otherwise just `name`.
-    pub fn display_qualified_name(&self) -> String {
-        match &self.schema {
-            Some(s) => format!("{s}.{}", self.name),
-            None => self.name.clone(),
-        }
-    }
 }
 
 #[cfg(test)]
