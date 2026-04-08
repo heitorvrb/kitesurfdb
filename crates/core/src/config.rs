@@ -2,7 +2,7 @@ use db::types::ConnectionConfig;
 use std::fs;
 use std::path::PathBuf;
 
-const APP_DIR: &str = "db_client";
+const APP_DIR: &str = "kitesurfdb";
 const CONNECTIONS_FILE: &str = "connections.json";
 
 pub fn default_config_dir() -> Option<PathBuf> {

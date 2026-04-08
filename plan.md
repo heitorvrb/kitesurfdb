@@ -14,7 +14,7 @@ Building a cross-platform desktop database client in Rust using Dioxus. The goal
 | Database | **sqlx 0.8** | Unified async API for both Postgres and SQLite |
 | SQL Editor | **Plain `<textarea>` + `syntect`** | Syntax highlighting via pure Rust |
 | Async Runtime | **tokio** | Used by both Dioxus and sqlx |
-| Config | **serde + serde_json** | Save connections/preferences to `~/.config/db_client/` |
+| Config | **serde + serde_json** | Save connections/preferences to `~/.config/kitesurfdb/` |
 | Other | `dirs`, `uuid`, `chrono`, `thiserror`, `tracing`, `tokio-util` (CancellationToken), `syntect`, `keyring` |
 
 ---
@@ -22,7 +22,7 @@ Building a cross-platform desktop database client in Rust using Dioxus. The goal
 ## Project Structure
 
 ```
-db_client/
+kitesurfdb/
   Cargo.toml                  # workspace root
   spec.md
   assets/
