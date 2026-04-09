@@ -310,6 +310,10 @@ pub fn ConnectionDialog(
                         }
                     }
 
+                    if let Some(err) = connection_error.read().as_ref() {
+                        div { class: "error", "{err}" }
+                    }
+
                     div { class: Styles::dialog_actions,
                         button {
                             class: Styles::connect_btn,

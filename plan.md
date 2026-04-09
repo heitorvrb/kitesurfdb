@@ -151,9 +151,9 @@ User action (Run button / Ctrl+Enter / click table in sidebar)
 **Goal:** Production-quality error handling and polish.
 
 - [x] Change sidebar structure: instead of tables with schemas inside, views with schemas inside, etc, have schemas as root items and then tables, views, etc. inside
-- [ ] Error display (connection failures, query errors)
-- [ ] Pagination in table browser
-- [ ] Result row limit (default 100) with "load more"
+- [x] Error display (connection failures, query errors)
+- [x] Pagination in table browser
+- [x] Result row limit (default 100) with "load more"
 
 ### Phase 6: Quality of life
 
