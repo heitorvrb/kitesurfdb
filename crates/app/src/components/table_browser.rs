@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use app_core::tab_manager::{TabManager, TabType, PAGE_SIZE};
 use db::traits::DbBackend;
-use db::types::{DbValue, QueryResult, SchemaInfo};
+use db::types::{DbValue, SchemaInfo};
 use dioxus::prelude::*;
 use uuid::Uuid;
 
@@ -60,7 +60,7 @@ pub fn TableBrowser(
                     if let Some(b) = backend.read().as_ref() {
                         let b = b.clone();
 
-                        // Step 1: count query — bail early if 0 or failed
+                        // Step 1: count query — bail early on error, set total_count if > 0
                         if let Some(csql) = count_sql {
                             let count_result = tokio::select! {
                                 r = b.execute_query(&csql) => r,
@@ -79,21 +79,10 @@ pub fn TableBrowser(
                                         .and_then(|row| row.first())
                                         .and_then(|v| if let DbValue::Int(n) = v { Some(*n as u64) } else { None })
                                         .unwrap_or(0);
-                                    if n == 0 {
+                                    if n > 0 {
                                         if let Some(tab) = tab_manager.write().tab_by_id_mut(tab_id) {
-                                            tab.result = Some(QueryResult {
-                                                columns: vec![],
-                                                rows: vec![],
-                                                rows_affected: 0,
-                                                execution_time: r.execution_time,
-                                                query: r.query,
-                                            });
-                                            tab.is_loading = false;
+                                            tab.total_count = Some(n);
                                         }
-                                        return;
-                                    }
-                                    if let Some(tab) = tab_manager.write().tab_by_id_mut(tab_id) {
-                                        tab.total_count = Some(n);
                                     }
                                 }
                             }
