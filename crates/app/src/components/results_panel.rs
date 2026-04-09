@@ -8,6 +8,8 @@ struct Styles;
 pub fn ResultsPanel(
     result: Option<QueryResult>,
     error: Option<String>,
+    #[props(default)]
+    total_count: Option<u64>,
     children: Element,
 ) -> Element {
     rsx! {
@@ -17,7 +19,11 @@ pub fn ResultsPanel(
             }
             if let Some(result) = &result {
                 div { class: Styles::result_info,
-                    "Rows: {result.rows.len()} | Time: {result.execution_time:?}"
+                    if let Some(total) = total_count {
+                        "Rows: {result.rows.len()} | Total: {total} | Time: {result.execution_time:?}"
+                    } else {
+                        "Rows: {result.rows.len()} | Time: {result.execution_time:?}"
+                    }
                 }
                 if !result.columns.is_empty() {
                     table { class: Styles::result_table,

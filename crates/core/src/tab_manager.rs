@@ -12,6 +12,7 @@ pub enum TabType {
     TableBrowser {
         object_name: String,
         generated_sql: String,
+        count_sql: String,
     },
     TriggerView {
         object_name: String,
@@ -32,6 +33,7 @@ pub struct Tab {
     pub error: Option<String>,
     pub is_loading: bool,
     pub cancellation_token: CancellationToken,
+    pub total_count: Option<u64>,
 }
 
 pub struct TabManager {
@@ -83,6 +85,7 @@ impl TabManager {
             error: None,
             is_loading: false,
             cancellation_token: CancellationToken::new(),
+            total_count: None,
         });
         self.active_tab_id = Some(id);
         id
@@ -202,11 +205,13 @@ impl TabManager {
             None => format!("\"{table_name}\""),
         };
         let sql = format!("SELECT * FROM {quoted} LIMIT {PAGE_SIZE}");
+        let count_sql = format!("SELECT COUNT(*) FROM {quoted}");
         self.open_tab(
             table_name,
             TabType::TableBrowser {
                 object_name: qualified_name,
                 generated_sql: sql,
+                count_sql,
             },
         )
     }
@@ -343,6 +348,7 @@ mod tests {
             TabType::TableBrowser {
                 object_name: "users".into(),
                 generated_sql: "SELECT * FROM \"users\" LIMIT 100".into(),
+                count_sql: "SELECT COUNT(*) FROM \"users\"".into(),
             }
         );
     }
@@ -358,6 +364,7 @@ mod tests {
             TabType::TableBrowser {
                 object_name: "testschema.user".into(),
                 generated_sql: "SELECT * FROM \"testschema\".\"user\" LIMIT 100".into(),
+                count_sql: "SELECT COUNT(*) FROM \"testschema\".\"user\"".into(),
             }
         );
     }
