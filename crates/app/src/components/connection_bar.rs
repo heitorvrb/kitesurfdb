@@ -67,7 +67,7 @@ pub fn ConnectionBar(
                     prefs.theme = new_theme;
                     let _ = config::save_preferences(&prefs);
                 },
-                if is_dark { "Light" } else { "Dark" }
+                if is_dark { "☀" } else { "☽" }
             }
             div { class: Styles::connection_bar,
                 if *is_connected.read() {

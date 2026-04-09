@@ -134,7 +134,7 @@
 }
 
 .select-wrapper::after {
-    content: "v";
+    content: "▼";
     position: absolute;
     right: 8px;
     top: 50%;
