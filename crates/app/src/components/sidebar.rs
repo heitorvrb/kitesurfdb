@@ -77,9 +77,9 @@ pub fn Sidebar(
     connection_manager: Signal<ConnectionManager>,
 ) -> Element {
     let mut tables_expanded = use_signal(|| true);
-    let mut views_expanded = use_signal(|| true);
-    let mut triggers_expanded = use_signal(|| true);
-    let mut functions_expanded = use_signal(|| true);
+    let mut views_expanded = use_signal(|| false);
+    let mut triggers_expanded = use_signal(|| false);
+    let mut functions_expanded = use_signal(|| false);
     let mut schema_info = schema_info;
 
     let refresh = move |_| {
@@ -109,12 +109,32 @@ pub fn Sidebar(
                     // Schema-grouped view (Postgres): schemas as root, object types nested
                     {
                         let groups = group_by_schema(schema);
+                        let default_schema = connection_manager
+                            .read()
+                            .active_connection_id()
+                            .and_then(|id| {
+                                connection_manager
+                                    .read()
+                                    .connections()
+                                    .iter()
+                                    .find(|c| c.id == id)
+                                    .and_then(|c| c.default_schema.clone())
+                            });
+                        // If no default schema is configured, fall back to the first in the list.
+                        let default_schema = default_schema
+                            .or_else(|| groups.first().map(|(name, _)| name.clone()));
                         rsx! {
                             for (schema_name, schema_objs) in groups {
-                                SchemaSection {
-                                    schema_name: schema_name,
-                                    objects: schema_objs,
-                                    tab_manager,
+                                {
+                                    let initially_expanded = default_schema.as_deref() == Some(schema_name.as_str());
+                                    rsx! {
+                                        SchemaSection {
+                                            schema_name: schema_name,
+                                            objects: schema_objs,
+                                            tab_manager,
+                                            initially_expanded,
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -187,8 +207,9 @@ fn SchemaSection(
     schema_name: String,
     objects: SchemaObjects,
     tab_manager: Signal<TabManager>,
+    initially_expanded: bool,
 ) -> Element {
-    let mut expanded = use_signal(|| true);
+    let mut expanded = use_signal(move || initially_expanded);
 
     rsx! {
         div {
@@ -205,16 +226,16 @@ fn SchemaSection(
                     div { class: Styles::schema_empty, "(no objects)" }
                 } else {
                     if !objects.tables.is_empty() {
-                        ObjectTypeGroup { title: "Tables", objects: objects.tables.clone(), tab_manager }
+                        ObjectTypeGroup { title: "Tables", objects: objects.tables.clone(), tab_manager, initially_expanded: true }
                     }
                     if !objects.views.is_empty() {
-                        ObjectTypeGroup { title: "Views", objects: objects.views.clone(), tab_manager }
+                        ObjectTypeGroup { title: "Views", objects: objects.views.clone(), tab_manager, initially_expanded: false }
                     }
                     if !objects.triggers.is_empty() {
-                        ObjectTypeGroup { title: "Triggers", objects: objects.triggers.clone(), tab_manager }
+                        ObjectTypeGroup { title: "Triggers", objects: objects.triggers.clone(), tab_manager, initially_expanded: false }
                     }
                     if !objects.functions.is_empty() {
-                        ObjectTypeGroup { title: "Functions", objects: objects.functions.clone(), tab_manager }
+                        ObjectTypeGroup { title: "Functions", objects: objects.functions.clone(), tab_manager, initially_expanded: false }
                     }
                 }
             }
@@ -228,8 +249,9 @@ fn ObjectTypeGroup(
     title: &'static str,
     objects: Vec<DbObject>,
     tab_manager: Signal<TabManager>,
+    initially_expanded: bool,
 ) -> Element {
-    let mut expanded = use_signal(|| true);
+    let mut expanded = use_signal(move || initially_expanded);
     let count = objects.len();
 
     rsx! {
