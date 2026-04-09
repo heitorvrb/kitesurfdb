@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use app_core::tab_manager::{TabManager, TabType, PAGE_SIZE};
 use db::traits::DbBackend;
-use db::types::SchemaInfo;
+use db::types::{DbValue, SchemaInfo};
 use dioxus::prelude::*;
 use uuid::Uuid;
 
@@ -27,20 +27,22 @@ pub fn TableBrowser(
         let has_result = {
             let tm = tab_manager.read();
             tm.tab_by_id(tab_id)
-                .map(|t| t.result.is_some() || t.is_loading)
+                .map(|t| t.result.is_some() || t.is_loading || t.total_count.is_some())
                 .unwrap_or(true)
         };
 
         if !has_result {
-            let sql = {
+            let (sql, count_sql) = {
                 let tm = tab_manager.read();
-                tm.tab_by_id(tab_id).and_then(|t| {
-                    if let TabType::TableBrowser { generated_sql, .. } = &t.tab_type {
-                        Some(generated_sql.clone())
-                    } else {
-                        None
-                    }
-                })
+                tm.tab_by_id(tab_id)
+                    .and_then(|t| {
+                        if let TabType::TableBrowser { generated_sql, count_sql, .. } = &t.tab_type {
+                            Some((generated_sql.clone(), count_sql.clone()))
+                        } else {
+                            None
+                        }
+                    })
+                    .unzip()
             };
 
             let token = {
@@ -57,6 +59,41 @@ pub fn TableBrowser(
                 spawn(async move {
                     if let Some(b) = backend.read().as_ref() {
                         let b = b.clone();
+
+                        // Step 1: count query — bail early if 0 or failed
+                        if let Some(csql) = count_sql {
+                            let count_result = tokio::select! {
+                                r = b.execute_query(&csql) => r,
+                                _ = token.cancelled() => { return; }
+                            };
+                            match count_result {
+                                Err(e) => {
+                                    if let Some(tab) = tab_manager.write().tab_by_id_mut(tab_id) {
+                                        tab.error = Some(e.to_string());
+                                        tab.is_loading = false;
+                                    }
+                                    return;
+                                }
+                                Ok(r) => {
+                                    let n = r.rows.first()
+                                        .and_then(|row| row.first())
+                                        .and_then(|v| if let DbValue::Int(n) = v { Some(*n as u64) } else { None })
+                                        .unwrap_or(0);
+                                    if n == 0 {
+                                        if let Some(tab) = tab_manager.write().tab_by_id_mut(tab_id) {
+                                            tab.total_count = Some(0);
+                                            tab.is_loading = false;
+                                        }
+                                        return;
+                                    }
+                                    if let Some(tab) = tab_manager.write().tab_by_id_mut(tab_id) {
+                                        tab.total_count = Some(n);
+                                    }
+                                }
+                            }
+                        }
+
+                        // Step 2: main data query
                         tokio::select! {
                             result = b.execute_query(&sql) => {
                                 if !token.is_cancelled() {
@@ -89,7 +126,7 @@ pub fn TableBrowser(
         }
     });
 
-    let (generated_sql, result, error, is_loading) = {
+    let (generated_sql, result, error, is_loading, total_count) = {
         let tm = tab_manager.read();
         let tab = tm.tab_by_id(tab_id);
         let sql = tab
@@ -104,7 +141,8 @@ pub fn TableBrowser(
         let result = tab.and_then(|t| t.result.clone());
         let error = tab.and_then(|t| t.error.clone());
         let is_loading = tab.map(|t| t.is_loading).unwrap_or(false);
-        (sql, result, error, is_loading)
+        let total_count = tab.and_then(|t| t.total_count);
+        (sql, result, error, is_loading, total_count)
     };
 
     let row_count = result.as_ref().map(|r| r.rows.len()).unwrap_or(0);
@@ -176,7 +214,7 @@ pub fn TableBrowser(
             if is_loading {
                 div { class: Styles::loading, "Loading..." }
             }
-            ResultsPanel { result, error,
+            ResultsPanel { result, error, total_count,
                 if has_more && !is_loading {
                     div { class: Styles::load_more_bar,
                         button {
