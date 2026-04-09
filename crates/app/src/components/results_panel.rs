@@ -8,6 +8,7 @@ struct Styles;
 pub fn ResultsPanel(
     result: Option<QueryResult>,
     error: Option<String>,
+    children: Element,
 ) -> Element {
     rsx! {
         div { class: Styles::results_panel,
@@ -42,6 +43,7 @@ pub fn ResultsPanel(
                     }
                 }
             }
+            {children}
         }
     }
 }
