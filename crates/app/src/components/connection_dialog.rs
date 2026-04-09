@@ -28,6 +28,7 @@ pub fn ConnectionDialog(
     let mut username = use_signal(|| String::from("postgres"));
     let mut password = use_signal(|| String::new());
     let mut file_path = use_signal(|| String::from(":memory:"));
+    let mut default_schema = use_signal(|| String::from("public"));
     let mut editing_id: Signal<Option<Uuid>> = use_signal(|| None);
 
     let mut is_connected = is_connected;
@@ -48,6 +49,7 @@ pub fn ConnectionDialog(
         let pass_val = password.read().clone();
         let path_val = file_path.read().clone();
         let edit_id = *editing_id.read();
+        let default_schema_val = default_schema.read().clone();
 
         spawn(async move {
             connection_error.set(None);
@@ -55,7 +57,13 @@ pub fn ConnectionDialog(
             let mut config = match bt {
                 BackendType::Sqlite => ConnectionConfig::new_sqlite(&name, &path_val),
                 BackendType::Postgres => {
-                    ConnectionConfig::new_postgres(&name, &host_val, port_val, &db_val, &user_val)
+                    let mut c = ConnectionConfig::new_postgres(&name, &host_val, port_val, &db_val, &user_val);
+                    c.default_schema = if default_schema_val.trim().is_empty() {
+                        None
+                    } else {
+                        Some(default_schema_val.trim().to_string())
+                    };
+                    c
                 }
             };
 
@@ -126,6 +134,7 @@ pub fn ConnectionDialog(
                     .unwrap_or_default(),
             );
             password.set(String::new()); // Don't show stored passwords
+            default_schema.set(config.default_schema.clone().unwrap_or_default());
             editing_id.set(Some(id));
         }
     };
@@ -292,6 +301,14 @@ pub fn ConnectionDialog(
                                 value: "{password}",
                                 placeholder: "(stored in OS keyring)",
                                 oninput: move |e| password.set(e.value()),
+                            }
+                        }
+                        div { class: Styles::field,
+                            label { "Default Schema" }
+                            input {
+                                value: "{default_schema}",
+                                placeholder: "public",
+                                oninput: move |e| default_schema.set(e.value()),
                             }
                         }
                     }

@@ -197,6 +197,7 @@ mod tests {
             username: None,
             password: None,
             file_path: None,
+            default_schema: None,
         };
         let result = SqliteBackend::connect(&config).await;
         assert!(result.is_err());

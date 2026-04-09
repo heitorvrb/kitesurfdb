@@ -330,6 +330,7 @@ mod tests {
             username: Some("postgres".into()),
             password: None,
             file_path: None,
+            default_schema: None,
         };
         let rt = tokio::runtime::Runtime::new().unwrap();
         let result = rt.block_on(PostgresBackend::connect(&config));
@@ -349,6 +350,7 @@ mod tests {
             username: None,
             password: None,
             file_path: None,
+            default_schema: None,
         };
         let rt = tokio::runtime::Runtime::new().unwrap();
         let result = rt.block_on(PostgresBackend::connect(&config));

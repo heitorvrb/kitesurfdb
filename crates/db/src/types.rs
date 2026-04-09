@@ -24,6 +24,9 @@ pub struct ConnectionConfig {
     #[serde(skip)]
     pub password: Option<String>,
     pub file_path: Option<PathBuf>,
+    /// The schema to expand by default in the sidebar (Postgres only).
+    #[serde(default)]
+    pub default_schema: Option<String>,
 }
 
 impl ConnectionConfig {
@@ -38,6 +41,7 @@ impl ConnectionConfig {
             username: None,
             password: None,
             file_path: Some(path.into()),
+            default_schema: None,
         }
     }
 
@@ -58,6 +62,7 @@ impl ConnectionConfig {
             username: Some(username.into()),
             password: None,
             file_path: None,
+            default_schema: Some("public".into()),
         }
     }
 }
