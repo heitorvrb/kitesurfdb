@@ -16,6 +16,7 @@ pub fn TabContainer(
     backend: Signal<Option<Arc<dyn DbBackend>>>,
     schema_info: Signal<Option<SchemaInfo>>,
     theme: Signal<Theme>,
+    is_connected: Signal<bool>,
 ) -> Element {
     let active_info = {
         let tm = tab_manager.read();
@@ -55,7 +56,11 @@ pub fn TabContainer(
             None => rsx! {
                 div {
                     style: "flex:1;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);font-size:14px;",
-                    "Open a tab to get started"
+                    if *is_connected.read() {
+                        "Open a tab to get started"
+                    } else {
+                        "Connect to a database to get started"
+                    }
                 }
             },
         }

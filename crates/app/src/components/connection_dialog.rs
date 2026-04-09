@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use app_core::connection_manager::ConnectionManager;
-use app_core::tab_manager::TabManager;
 use db::traits::DbBackend;
 use db::types::{BackendType, ConnectionConfig, SchemaInfo};
 use dioxus::prelude::*;
@@ -15,7 +14,6 @@ pub fn ConnectionDialog(
     show_dialog: Signal<bool>,
     backend: Signal<Option<Arc<dyn DbBackend>>>,
     is_connected: Signal<bool>,
-    tab_manager: Signal<TabManager>,
     schema_info: Signal<Option<SchemaInfo>>,
     connection_manager: Signal<ConnectionManager>,
     connection_error: Signal<Option<String>>,
@@ -33,7 +31,6 @@ pub fn ConnectionDialog(
 
     let mut is_connected = is_connected;
     let mut schema_info = schema_info;
-    let mut tab_manager = tab_manager;
     let mut connection_error = connection_error;
     let mut show_dialog = show_dialog;
 
@@ -107,7 +104,6 @@ pub fn ConnectionDialog(
                     }
                     backend.set(Some(b));
                     is_connected.set(true);
-                    tab_manager.write().open_sql_editor();
                     show_dialog.set(false);
                 }
                 Err(e) => {
@@ -170,7 +166,6 @@ pub fn ConnectionDialog(
                     }
                     backend.set(Some(b));
                     is_connected.set(true);
-                    tab_manager.write().open_sql_editor();
                     show_dialog.set(false);
                 }
                 Err(e) => {

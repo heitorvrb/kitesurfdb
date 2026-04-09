@@ -47,7 +47,8 @@ pub fn App() -> Element {
                   tab_manager,
                   backend,
                   schema_info,
-                  theme
+                  theme,
+                  is_connected,
                 }
             }
         }

@@ -18,11 +18,12 @@ pub fn EditorArea(
     backend: Signal<Option<Arc<dyn DbBackend>>>,
     schema_info: Signal<Option<SchemaInfo>>,
     theme: Signal<Theme>,
+    is_connected: Signal<bool>,
 ) -> Element {
     rsx! {
         div { class: Styles::editor_area,
-            TabBar { tab_manager }
-            TabContainer { tab_manager, backend, schema_info, theme }
+            TabBar { tab_manager, is_connected }
+            TabContainer { tab_manager, backend, schema_info, theme, is_connected }
         }
     }
 }

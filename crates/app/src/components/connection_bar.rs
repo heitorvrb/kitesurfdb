@@ -97,7 +97,6 @@ pub fn ConnectionBar(
                 show_dialog,
                 backend,
                 is_connected,
-                tab_manager,
                 schema_info,
                 connection_manager,
                 connection_error,
