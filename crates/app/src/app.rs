@@ -19,7 +19,9 @@ pub fn App() -> Element {
     let tab_manager: Signal<TabManager> = use_signal(TabManager::new);
     let schema_info: Signal<Option<SchemaInfo>> = use_signal(|| None);
     let connection_manager: Signal<ConnectionManager> = use_signal(ConnectionManager::new);
-    let theme: Signal<Theme> = use_signal(|| config::load_preferences().theme);
+    let prefs = config::load_preferences();
+    let theme: Signal<Theme> = use_signal(|| prefs.theme);
+    let sidebar_visible: Signal<bool> = use_signal(|| prefs.sidebar_visible);
 
     let theme_str = theme.read().as_str();
 
@@ -34,14 +36,17 @@ pub fn App() -> Element {
                 schema_info,
                 connection_manager,
                 theme,
+                sidebar_visible,
             }
             div { class: Styles::main_layout,
-                Sidebar {
-                    schema_info,
-                    tab_manager,
-                    is_connected,
-                    backend,
-                    connection_manager,
+                if *sidebar_visible.read() {
+                    Sidebar {
+                        schema_info,
+                        tab_manager,
+                        is_connected,
+                        backend,
+                        connection_manager,
+                    }
                 }
                 EditorArea {
                   tab_manager,

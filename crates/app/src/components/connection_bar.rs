@@ -20,12 +20,14 @@ pub fn ConnectionBar(
     schema_info: Signal<Option<SchemaInfo>>,
     connection_manager: Signal<ConnectionManager>,
     theme: Signal<Theme>,
+    sidebar_visible: Signal<bool>,
 ) -> Element {
     let connection_error: Signal<Option<String>> = use_signal(|| None);
     let mut is_connected = is_connected;
     let mut schema_info = schema_info;
     let mut tab_manager = tab_manager;
     let mut theme = theme;
+    let mut sidebar_visible = sidebar_visible;
     let mut show_dialog = use_signal(|| false);
 
     let disconnect = move |_| {
@@ -54,9 +56,22 @@ pub fn ConnectionBar(
     };
 
     let is_dark = *theme.read() == Theme::Dark;
+    let sidebar_shown = *sidebar_visible.read();
 
     rsx! {
         header { class: Styles::toolbar,
+            button {
+                class: Styles::sidebar_toggle_btn,
+                title: if sidebar_shown { "Hide sidebar" } else { "Show sidebar" },
+                onclick: move |_| {
+                    let new_val = !*sidebar_visible.read();
+                    sidebar_visible.set(new_val);
+                    let mut prefs = config::load_preferences();
+                    prefs.sidebar_visible = new_val;
+                    let _ = config::save_preferences(&prefs);
+                },
+                if sidebar_shown { "‹" } else { "›" }
+            }
             h1 { "Kitesurf" }
             button {
                 class: Styles::theme_btn,

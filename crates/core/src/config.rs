@@ -79,16 +79,23 @@ impl Default for Theme {
     }
 }
 
+fn default_true() -> bool {
+    true
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Preferences {
     #[serde(default)]
     pub theme: Theme,
+    #[serde(default = "default_true")]
+    pub sidebar_visible: bool,
 }
 
 impl Default for Preferences {
     fn default() -> Self {
         Self {
             theme: Theme::default(),
+            sidebar_visible: true,
         }
     }
 }
@@ -163,10 +170,19 @@ mod tests {
 
     #[test]
     fn test_preferences_serialization() {
-        let prefs = Preferences { theme: Theme::Light };
+        let prefs = Preferences { theme: Theme::Light, sidebar_visible: false };
         let json = serde_json::to_string(&prefs).unwrap();
         let loaded: Preferences = serde_json::from_str(&json).unwrap();
         assert_eq!(loaded.theme, Theme::Light);
+        assert!(!loaded.sidebar_visible);
+    }
+
+    #[test]
+    fn test_preferences_sidebar_visible_defaults_true() {
+        // Old preferences.json without sidebar_visible should default to true
+        let json = r#"{"theme":"Dark"}"#;
+        let loaded: Preferences = serde_json::from_str(json).unwrap();
+        assert!(loaded.sidebar_visible);
     }
 
     #[test]
