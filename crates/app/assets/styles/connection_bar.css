@@ -12,6 +12,24 @@
     margin-right: 16px;
 }
 
+.sidebar-toggle-btn {
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 16px;
+    background: none;
+    color: var(--text-secondary);
+    margin-right: 8px;
+    line-height: 1;
+}
+
+.sidebar-toggle-btn:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
 .theme-btn {
     padding: 4px 10px;
     border: 1px solid var(--border);
