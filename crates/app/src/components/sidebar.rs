@@ -217,7 +217,7 @@ fn SchemaSection(
                 class: Styles::section_header,
                 onclick: move |_| expanded.toggle(),
                 span { class: Styles::toggle,
-                    if *expanded.read() { "v" } else { ">" }
+                    if *expanded.read() { "▼" } else { "▶" }
                 }
                 "{schema_name}"
             }
@@ -260,7 +260,7 @@ fn ObjectTypeGroup(
                 class: Styles::schema_header,
                 onclick: move |_| expanded.toggle(),
                 span { class: Styles::toggle,
-                    if *expanded.read() { "v" } else { ">" }
+                    if *expanded.read() { "▼" } else { "▶" }
                 }
                 "{title} ({count})"
             }
@@ -301,7 +301,7 @@ fn ObjectSection(
                 class: Styles::section_header,
                 onclick: move |_| on_toggle.call(()),
                 span { class: Styles::toggle,
-                    if *expanded.read() { "v" } else { ">" }
+                    if *expanded.read() { "▼" } else { "▶" }
                 }
                 "{title} ({total})"
             }
