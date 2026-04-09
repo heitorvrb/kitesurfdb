@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 struct Styles;
 
 #[component]
-pub fn TabBar(tab_manager: Signal<TabManager>) -> Element {
+pub fn TabBar(tab_manager: Signal<TabManager>, is_connected: Signal<bool>) -> Element {
     let tabs_info: Vec<(uuid::Uuid, String, bool)> = {
         let tm = tab_manager.read();
         let active_id = tm.active_tab_id();
@@ -37,10 +37,12 @@ pub fn TabBar(tab_manager: Signal<TabManager>) -> Element {
                     }
                 }
             }
-            button {
-                class: Styles::new_tab_btn,
-                onclick: move |_| { tab_manager.write().open_sql_editor(); },
-                "+"
+            if *is_connected.read() {
+                button {
+                    class: Styles::new_tab_btn,
+                    onclick: move |_| { tab_manager.write().open_sql_editor(); },
+                    "+"
+                }
             }
         }
     }
