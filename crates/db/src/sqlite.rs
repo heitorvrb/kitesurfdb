@@ -92,6 +92,7 @@ impl DbBackend for SqliteBackend {
         let triggers = self.query_objects("trigger").await?;
 
         Ok(SchemaInfo {
+            schemas: Vec::new(), // SQLite has no schema/namespace concept
             tables,
             views,
             triggers,

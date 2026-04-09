@@ -150,7 +150,7 @@ User action (Run button / Ctrl+Enter / click table in sidebar)
 ### Phase 5: Robustness + UX
 **Goal:** Production-quality error handling and polish.
 
-- [ ] Change sidebar structure: instead of tables with schemas inside, views with schemas inside, etc, have schemas as root items and then tables, views, etc. inside
+- [x] Change sidebar structure: instead of tables with schemas inside, views with schemas inside, etc, have schemas as root items and then tables, views, etc. inside
 - [ ] Error display (connection failures, query errors)
 - [ ] Pagination in table browser
 - [ ] Result row limit (default 1000) with "load more"

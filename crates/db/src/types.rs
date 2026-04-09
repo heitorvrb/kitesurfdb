@@ -104,6 +104,9 @@ impl fmt::Display for DbValue {
 
 #[derive(Debug, Clone)]
 pub struct SchemaInfo {
+    /// All schema/namespace names known to the database, including empty ones.
+    /// Empty for backends without a schema concept (SQLite).
+    pub schemas: Vec<String>,
     pub tables: Vec<DbObject>,
     pub views: Vec<DbObject>,
     pub triggers: Vec<DbObject>,
