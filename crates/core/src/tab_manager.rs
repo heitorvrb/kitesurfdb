@@ -116,7 +116,16 @@ impl TabManager {
     }
 
     pub fn open_sql_editor(&mut self) -> Uuid {
-        let n = self.tabs.iter().filter(|t| matches!(t.tab_type, TabType::SqlEditor { .. })).count() + 1;
+        let n = self.tabs.iter()
+            .filter_map(|t| {
+                if matches!(t.tab_type, TabType::SqlEditor { .. }) {
+                    t.title.strip_prefix("Query ").and_then(|n| n.parse::<usize>().ok())
+                } else {
+                    None
+                }
+            })
+            .max()
+            .unwrap_or(0) + 1;
         self.open_tab(
             format!("Query {n}"),
             TabType::SqlEditor {
@@ -309,6 +318,16 @@ mod tests {
         let id2 = tm.open_sql_editor();
         let tab2 = tm.tab_by_id(id2).unwrap();
         assert_eq!(tab2.title, "Query 2");
+    }
+
+    #[test]
+    fn test_open_sql_editor_skips_closed_numbers() {
+        let mut tm = TabManager::new();
+        let id1 = tm.open_sql_editor(); // Query 1
+        tm.open_sql_editor();           // Query 2
+        tm.close_tab(id1);              // close Query 1; Query 2 remains
+        let id3 = tm.open_sql_editor(); // should be Query 3, not Query 2
+        assert_eq!(tm.tab_by_id(id3).unwrap().title, "Query 3");
     }
 
     #[test]
