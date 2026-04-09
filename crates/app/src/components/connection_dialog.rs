@@ -241,18 +241,20 @@ pub fn ConnectionDialog(
                     }
                     div { class: Styles::field,
                         label { "Backend" }
-                        select {
-                            value: if *backend_type.read() == BackendType::Sqlite { "sqlite" } else { "postgres" },
-                            onchange: move |e| {
-                                let val = e.value();
-                                if val == "sqlite" {
-                                    backend_type.set(BackendType::Sqlite);
-                                } else {
-                                    backend_type.set(BackendType::Postgres);
-                                }
-                            },
-                            option { value: "sqlite", "SQLite" }
-                            option { value: "postgres", "PostgreSQL" }
+                        div { class: Styles::select_wrapper,
+                            select {
+                                value: if *backend_type.read() == BackendType::Sqlite { "sqlite" } else { "postgres" },
+                                onchange: move |e| {
+                                    let val = e.value();
+                                    if val == "sqlite" {
+                                        backend_type.set(BackendType::Sqlite);
+                                    } else {
+                                        backend_type.set(BackendType::Postgres);
+                                    }
+                                },
+                                option { value: "sqlite", "SQLite" }
+                                option { value: "postgres", "PostgreSQL" }
+                            }
                         }
                     }
 
