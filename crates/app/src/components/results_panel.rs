@@ -10,6 +10,8 @@ pub fn ResultsPanel(
     error: Option<String>,
     #[props(default)]
     total_count: Option<u64>,
+    #[props(default)]
+    on_refresh: Option<EventHandler>,
     children: Element,
 ) -> Element {
     rsx! {
@@ -24,7 +26,16 @@ pub fn ResultsPanel(
                     } else {
                         "Rows: {result.rows.len()} | Time: {result.execution_time:?}"
                     }
+                    if let Some(handler) = on_refresh {
+                        button {
+                            class: Styles::refresh_btn,
+                            onclick: move |_| handler.call(()),
+                            "↻ Refresh"
+                        }
+                    }
                 }
+            }
+            if let Some(result) = &result {
                 if !result.columns.is_empty() {
                     table { class: Styles::result_table,
                         thead {

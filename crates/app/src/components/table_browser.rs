@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use app_core::tab_manager::{TabManager, TabType, PAGE_SIZE};
 use db::traits::DbBackend;
-use db::types::{DbValue, SchemaInfo};
+use db::types::{DbValue, QueryResult, SchemaInfo};
 use dioxus::prelude::*;
 use uuid::Uuid;
 
@@ -81,7 +81,13 @@ pub fn TableBrowser(
                                         .unwrap_or(0);
                                     if n == 0 {
                                         if let Some(tab) = tab_manager.write().tab_by_id_mut(tab_id) {
-                                            tab.total_count = Some(0);
+                                            tab.result = Some(QueryResult {
+                                                columns: vec![],
+                                                rows: vec![],
+                                                rows_affected: 0,
+                                                execution_time: r.execution_time,
+                                                query: r.query,
+                                            });
                                             tab.is_loading = false;
                                         }
                                         return;
@@ -147,6 +153,15 @@ pub fn TableBrowser(
 
     let row_count = result.as_ref().map(|r| r.rows.len()).unwrap_or(0);
     let has_more = row_count > 0 && row_count % PAGE_SIZE == 0;
+
+    let refresh = move |_| {
+        if let Some(tab) = tab_manager.write().tab_by_id_mut(tab_id) {
+            tab.result = None;
+            tab.total_count = None;
+            tab.error = None;
+            tab.is_loading = false;
+        }
+    };
 
     let load_more = move |_| {
         let offset = {
@@ -214,7 +229,7 @@ pub fn TableBrowser(
             if is_loading {
                 div { class: Styles::loading, "Loading..." }
             }
-            ResultsPanel { result, error, total_count,
+            ResultsPanel { result, error, total_count, on_refresh: refresh,
                 if has_more && !is_loading {
                     div { class: Styles::load_more_bar,
                         button {
