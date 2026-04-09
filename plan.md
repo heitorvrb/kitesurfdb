@@ -158,7 +158,7 @@ User action (Run button / Ctrl+Enter / click table in sidebar)
 ### Phase 6: Quality of life
 
 - [x] Together with Rows: 100 | Time: 17.17839ms, show a count of total items. So it will now make two queries, one for counting and one for limit 100. If there are less than 100 rows, no need to show the second count.
-- [ ] Together with Rows: 100 | Time: 17.17839ms, show a refresh button. Clicking it should re-do the query(ies).
+- [x] Together with Rows: 100 | Time: 17.17839ms, show a refresh button. Clicking it should re-do the query(ies).
 - [ ] When a table has no lines, show the header with its columns anyway.
 - [ ] Add a button to show/hide the sidebar, and make it permanent by saving its state to the configuration.json file.
 - [ ] F5 should refresh the results of the opened tab
