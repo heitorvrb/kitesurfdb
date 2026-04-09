@@ -95,7 +95,7 @@ pub fn Sidebar(
     rsx! {
         div { class: Styles::sidebar,
             if !*is_connected.read() {
-                div { class: Styles::sidebar_empty, "Connect to a database to browse schema" }
+                div { class: Styles::sidebar_empty, "Connect to a database to browse its contents" }
             } else if let Some(schema) = schema_info.read().as_ref() {
                 div { class: Styles::sidebar_toolbar,
                     span { class: Styles::sidebar_title, "Schema" }
