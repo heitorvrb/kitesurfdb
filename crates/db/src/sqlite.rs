@@ -35,26 +35,40 @@ impl DbBackend for SqliteBackend {
     }
 
     async fn execute_query(&self, sql: &str) -> Result<QueryResult, DbError> {
+        use sqlx::Executor;
+
         let start = Instant::now();
         let rows: Vec<SqliteRow> = sqlx::query(sql).fetch_all(&self.pool).await?;
         let execution_time = start.elapsed();
 
-        let (columns, result_rows) = if rows.is_empty() {
-            (Vec::new(), Vec::new())
-        } else {
-            let columns: Vec<ColumnInfo> = rows[0]
+        let columns: Vec<ColumnInfo> = if let Some(first_row) = rows.first() {
+            first_row
                 .columns()
                 .iter()
                 .map(|c| ColumnInfo {
                     name: c.name().to_string(),
                     type_name: c.type_info().to_string(),
                 })
-                .collect();
-
-            let result_rows: Vec<Vec<DbValue>> = rows.iter().map(|row| extract_row(row)).collect();
-
-            (columns, result_rows)
+                .collect()
+        } else {
+            // No rows returned — use prepare to retrieve column metadata anyway
+            use sqlx::Statement;
+            (&self.pool)
+                .prepare(sql)
+                .await
+                .map(|stmt| {
+                    stmt.columns()
+                        .iter()
+                        .map(|c| ColumnInfo {
+                            name: c.name().to_string(),
+                            type_name: c.type_info().to_string(),
+                        })
+                        .collect()
+                })
+                .unwrap_or_default()
         };
+
+        let result_rows: Vec<Vec<DbValue>> = rows.iter().map(|row| extract_row(row)).collect();
 
         Ok(QueryResult {
             columns,
@@ -266,7 +280,8 @@ mod tests {
             .unwrap();
 
         let result = backend.execute_query("SELECT * FROM t").await.unwrap();
-        assert!(result.columns.is_empty());
+        assert_eq!(result.columns.len(), 1);
+        assert_eq!(result.columns[0].name, "a");
         assert!(result.rows.is_empty());
     }
 
