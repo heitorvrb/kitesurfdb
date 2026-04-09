@@ -176,13 +176,14 @@ pub fn TableBrowser(
             if is_loading {
                 div { class: Styles::loading, "Loading..." }
             }
-            ResultsPanel { result, error }
-            if has_more && !is_loading {
-                div { class: Styles::load_more_bar,
-                    button {
-                        class: Styles::load_more_btn,
-                        onclick: load_more,
-                        "Load more rows"
+            ResultsPanel { result, error,
+                if has_more && !is_loading {
+                    div { class: Styles::load_more_bar,
+                        button {
+                            class: Styles::load_more_btn,
+                            onclick: load_more,
+                            "Load more rows"
+                        }
                     }
                 }
             }
