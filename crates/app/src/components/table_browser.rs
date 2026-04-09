@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use app_core::tab_manager::{TabManager, TabType};
+use app_core::tab_manager::{TabManager, TabType, PAGE_SIZE};
 use db::traits::DbBackend;
 use db::types::SchemaInfo;
 use dioxus::prelude::*;
@@ -107,13 +107,86 @@ pub fn TableBrowser(
         (sql, result, error, is_loading)
     };
 
+    let row_count = result.as_ref().map(|r| r.rows.len()).unwrap_or(0);
+    let has_more = row_count > 0 && row_count % PAGE_SIZE == 0;
+
+    let load_more = move |_| {
+        let offset = {
+            let tm = tab_manager.read();
+            tm.tab_by_id(tab_id)
+                .and_then(|t| t.result.as_ref().map(|r| r.rows.len()))
+                .unwrap_or(0)
+        };
+
+        let sql = {
+            let tm = tab_manager.read();
+            tm.tab_by_id(tab_id).and_then(|t| {
+                if let TabType::TableBrowser { generated_sql, .. } = &t.tab_type {
+                    Some(format!("{generated_sql} OFFSET {offset}"))
+                } else {
+                    None
+                }
+            })
+        };
+
+        let token = {
+            let tm = tab_manager.read();
+            tm.tab_by_id(tab_id)
+                .map(|t| t.cancellation_token.clone())
+        };
+
+        if let (Some(sql), Some(token)) = (sql, token) {
+            if let Some(tab) = tab_manager.write().tab_by_id_mut(tab_id) {
+                tab.is_loading = true;
+            }
+
+            spawn(async move {
+                if let Some(b) = backend.read().as_ref() {
+                    let b = b.clone();
+                    tokio::select! {
+                        result = b.execute_query(&sql) => {
+                            if !token.is_cancelled() {
+                                if let Some(tab) = tab_manager.write().tab_by_id_mut(tab_id) {
+                                    match result {
+                                        Ok(new_result) => {
+                                            if let Some(existing) = tab.result.as_mut() {
+                                                existing.rows.extend(new_result.rows);
+                                                existing.execution_time += new_result.execution_time;
+                                            }
+                                            tab.error = None;
+                                        }
+                                        Err(e) => {
+                                            tab.error = Some(e.to_string());
+                                        }
+                                    }
+                                    tab.is_loading = false;
+                                }
+                            }
+                        }
+                        _ = token.cancelled() => {}
+                    }
+                }
+            });
+        }
+    };
+
     rsx! {
         div { class: Styles::table_browser,
             SqlDisplay { sql: generated_sql }
             if is_loading {
                 div { class: Styles::loading, "Loading..." }
             }
-            ResultsPanel { result, error }
+            ResultsPanel { result, error,
+                if has_more && !is_loading {
+                    div { class: Styles::load_more_bar,
+                        button {
+                            class: Styles::load_more_btn,
+                            onclick: load_more,
+                            "Load more rows"
+                        }
+                    }
+                }
+            }
         }
     }
 }
