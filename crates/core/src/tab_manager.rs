@@ -2,6 +2,8 @@ use db::types::QueryResult;
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
+pub const PAGE_SIZE: usize = 100;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum TabType {
     SqlEditor {
@@ -199,7 +201,7 @@ impl TabManager {
             Some(s) => format!("\"{s}\".\"{table_name}\""),
             None => format!("\"{table_name}\""),
         };
-        let sql = format!("SELECT * FROM {quoted} LIMIT 100");
+        let sql = format!("SELECT * FROM {quoted} LIMIT {PAGE_SIZE}");
         self.open_tab(
             table_name,
             TabType::TableBrowser {
