@@ -144,12 +144,14 @@ impl DbBackend for PostgresBackend {
     }
 
     async fn introspect(&self) -> Result<SchemaInfo, DbError> {
+        let schemas = self.query_schema_names().await?;
         let tables = self.query_objects("BASE TABLE", ObjectType::Table).await?;
         let views = self.query_objects("VIEW", ObjectType::View).await?;
         let triggers = self.query_triggers().await?;
         let functions = self.query_functions().await?;
 
         Ok(SchemaInfo {
+            schemas,
             tables,
             views,
             triggers,
@@ -163,6 +165,16 @@ impl DbBackend for PostgresBackend {
 }
 
 impl PostgresBackend {
+    async fn query_schema_names(&self) -> Result<Vec<String>, DbError> {
+        let sql = "SELECT nspname FROM pg_namespace \
+                   WHERE nspname NOT IN ('pg_catalog', 'information_schema') \
+                   AND nspname NOT LIKE 'pg_toast%' \
+                   AND nspname NOT LIKE 'pg_temp%' \
+                   ORDER BY nspname";
+        let rows: Vec<PgRow> = sqlx::query(sql).fetch_all(&self.pool).await?;
+        Ok(rows.iter().map(|row| row.get("nspname")).collect())
+    }
+
     async fn query_objects(
         &self,
         table_type: &str,
