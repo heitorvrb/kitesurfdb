@@ -1,11 +1,13 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use app_core::connection_manager::ConnectionManager;
 use app_core::tab_manager::TabManager;
 use db::traits::DbBackend;
 use db::types::{DbObject, ObjectType, SchemaInfo};
 use dioxus::prelude::*;
+use crate::operation_feedback::{OP_TIMEOUT, SLOW_WARNING_MS, slow_warning_message, timeout_error_message};
 
 #[css_module("/assets/styles/sidebar.css")]
 struct Styles;
@@ -81,16 +83,61 @@ pub fn Sidebar(
     let mut triggers_expanded = use_signal(|| false);
     let mut functions_expanded = use_signal(|| false);
     let mut schema_info = schema_info;
+    let mut is_refreshing = use_signal(|| false);
+    let mut refresh_started_at: Signal<Option<Instant>> = use_signal(|| None);
+    let mut refresh_elapsed_ms: Signal<u128> = use_signal(|| 0);
+    let mut refresh_error: Signal<Option<String>> = use_signal(|| None);
+
+    use_future(move || async move {
+        loop {
+            tokio::time::sleep(Duration::from_millis(150)).await;
+            if *is_refreshing.read() {
+                let started = refresh_started_at.read().unwrap_or_else(Instant::now);
+                if refresh_started_at.read().is_none() {
+                    refresh_started_at.set(Some(started));
+                }
+                refresh_elapsed_ms.set(started.elapsed().as_millis());
+            } else {
+                refresh_started_at.set(None);
+                refresh_elapsed_ms.set(0);
+            }
+        }
+    });
 
     let refresh = move |_| {
+        if *is_refreshing.read() {
+            return;
+        }
+        refresh_error.set(None);
+        is_refreshing.set(true);
+        refresh_started_at.set(Some(Instant::now()));
+        refresh_elapsed_ms.set(0);
         spawn(async move {
-            if let Some(b) = backend.read().as_ref() {
-                if let Ok(info) = b.introspect().await {
-                    schema_info.set(Some(info));
+            let b = backend.read().as_ref().map(|b| b.clone());
+            if let Some(b) = b {
+                match tokio::time::timeout(OP_TIMEOUT, b.introspect()).await {
+                    Ok(Ok(info)) => {
+                        schema_info.set(Some(info));
+                        refresh_error.set(None);
+                    }
+                    Ok(Err(e)) => {
+                        refresh_error.set(Some(e.to_string()));
+                    }
+                    Err(_) => {
+                        refresh_error.set(Some(timeout_error_message("Schema refresh")));
+                    }
                 }
+            } else {
+                refresh_error.set(Some("Not connected to a database".into()));
             }
+            is_refreshing.set(false);
+            refresh_started_at.set(None);
         });
     };
+
+    let elapsed_ms = *refresh_elapsed_ms.read();
+    let elapsed_secs = elapsed_ms as f64 / 1000.0;
+    let taking_longer = *is_refreshing.read() && elapsed_ms >= SLOW_WARNING_MS;
 
     rsx! {
         div { class: Styles::sidebar,
@@ -101,9 +148,23 @@ pub fn Sidebar(
                     span { class: Styles::sidebar_title, "Schema" }
                     button {
                         class: Styles::refresh_btn,
+                        disabled: *is_refreshing.read(),
                         onclick: refresh,
-                        "Refresh"
+                        if *is_refreshing.read() { "Refreshing..." } else { "Refresh" }
                     }
+                }
+                if *is_refreshing.read() {
+                    div { class: Styles::refresh_status,
+                        "Refreshing schema... {elapsed_secs:.1}s"
+                    }
+                }
+                if taking_longer {
+                    div { class: Styles::slow_warning,
+                        "{slow_warning_message()}"
+                    }
+                }
+                if let Some(err) = refresh_error.read().as_ref() {
+                    div { class: "error", "{err}" }
                 }
                 if has_any_schema(schema) {
                     // Schema-grouped view (Postgres): schemas as root, object types nested

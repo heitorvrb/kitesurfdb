@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use app_core::tab_manager::{TabManager, TabType, PAGE_SIZE};
 use db::traits::DbBackend;
@@ -8,6 +9,13 @@ use uuid::Uuid;
 
 use super::results_panel::ResultsPanel;
 use super::sql_display::SqlDisplay;
+use crate::operation_feedback::{
+    OP_TIMEOUT,
+    SLOW_WARNING_MS,
+    remaining_timeout,
+    slow_warning_message,
+    timeout_error_message,
+};
 
 #[css_module("/assets/styles/table_browser.css")]
 struct Styles;
@@ -21,13 +29,35 @@ pub fn TableBrowser(
 ) -> Element {
     let mut tab_manager = tab_manager;
     let mut schema_info = schema_info;
+    let mut loading_started_at: Signal<Option<Instant>> = use_signal(|| None);
+    let mut loading_elapsed_ms: Signal<u128> = use_signal(|| 0);
+
+    use_future(move || async move {
+        loop {
+            tokio::time::sleep(Duration::from_millis(150)).await;
+            let is_loading = {
+                let tm = tab_manager.read();
+                tm.tab_by_id(tab_id).map(|t| t.is_loading).unwrap_or(false)
+            };
+            if is_loading {
+                let started = loading_started_at.read().unwrap_or_else(Instant::now);
+                if loading_started_at.read().is_none() {
+                    loading_started_at.set(Some(started));
+                }
+                loading_elapsed_ms.set(started.elapsed().as_millis());
+            } else {
+                loading_started_at.set(None);
+                loading_elapsed_ms.set(0);
+            }
+        }
+    });
 
     // Auto-execute query on mount if no result yet
     use_effect(move || {
         let has_result = {
             let tm = tab_manager.read();
             tm.tab_by_id(tab_id)
-                .map(|t| t.result.is_some() || t.is_loading || t.total_count.is_some())
+                .map(|t| t.result.is_some() || t.is_loading || t.total_count.is_some() || t.error.is_some())
                 .unwrap_or(true)
         };
 
@@ -59,22 +89,30 @@ pub fn TableBrowser(
                 spawn(async move {
                     if let Some(b) = backend.read().as_ref() {
                         let b = b.clone();
+                        let started_at = Instant::now();
 
                         // Step 1: count query — bail early on error, set total_count if > 0
                         if let Some(csql) = count_sql {
+                            let Some(remaining) = remaining_timeout(started_at) else {
+                                if let Some(tab) = tab_manager.write().tab_by_id_mut(tab_id) {
+                                    tab.error = Some(timeout_error_message("Request"));
+                                    tab.is_loading = false;
+                                }
+                                return;
+                            };
                             let count_result = tokio::select! {
-                                r = b.execute_query(&csql) => r,
+                                r = tokio::time::timeout(remaining, b.execute_query(&csql)) => r,
                                 _ = token.cancelled() => { return; }
                             };
                             match count_result {
-                                Err(e) => {
+                                Ok(Err(e)) => {
                                     if let Some(tab) = tab_manager.write().tab_by_id_mut(tab_id) {
                                         tab.error = Some(e.to_string());
                                         tab.is_loading = false;
                                     }
                                     return;
                                 }
-                                Ok(r) => {
+                                Ok(Ok(r)) => {
                                     let n = r.rows.first()
                                         .and_then(|row| row.first())
                                         .and_then(|v| if let DbValue::Int(n) = v { Some(*n as u64) } else { None })
@@ -85,22 +123,40 @@ pub fn TableBrowser(
                                         }
                                     }
                                 }
+                                Err(_) => {
+                                    if let Some(tab) = tab_manager.write().tab_by_id_mut(tab_id) {
+                                        tab.error = Some(timeout_error_message("Request"));
+                                        tab.is_loading = false;
+                                    }
+                                    return;
+                                }
                             }
                         }
 
                         // Step 2: main data query
+                        let Some(remaining) = remaining_timeout(started_at) else {
+                            if let Some(tab) = tab_manager.write().tab_by_id_mut(tab_id) {
+                                tab.error = Some(timeout_error_message("Request"));
+                                tab.is_loading = false;
+                            }
+                            return;
+                        };
                         tokio::select! {
-                            result = b.execute_query(&sql) => {
+                            result = tokio::time::timeout(remaining, b.execute_query(&sql)) => {
                                 if !token.is_cancelled() {
-                                    let ok = result.is_ok();
+                                    let ok = matches!(result, Ok(Ok(_)));
                                     if let Some(tab) = tab_manager.write().tab_by_id_mut(tab_id) {
                                         match result {
-                                            Ok(r) => {
+                                            Ok(Ok(r)) => {
                                                 tab.result = Some(r);
                                                 tab.error = None;
                                             }
-                                            Err(e) => {
+                                            Ok(Err(e)) => {
                                                 tab.error = Some(e.to_string());
+                                                tab.result = None;
+                                            }
+                                            Err(_) => {
+                                                tab.error = Some(timeout_error_message("Request"));
                                                 tab.result = None;
                                             }
                                         }
@@ -115,6 +171,9 @@ pub fn TableBrowser(
                             }
                             _ = token.cancelled() => {}
                         }
+                    } else if let Some(tab) = tab_manager.write().tab_by_id_mut(tab_id) {
+                        tab.error = Some("Not connected to a database".into());
+                        tab.is_loading = false;
                     }
                 });
             }
@@ -181,19 +240,22 @@ pub fn TableBrowser(
                 if let Some(b) = backend.read().as_ref() {
                     let b = b.clone();
                     tokio::select! {
-                        result = b.execute_query(&sql) => {
+                        result = tokio::time::timeout(OP_TIMEOUT, b.execute_query(&sql)) => {
                             if !token.is_cancelled() {
                                 if let Some(tab) = tab_manager.write().tab_by_id_mut(tab_id) {
                                     match result {
-                                        Ok(new_result) => {
+                                        Ok(Ok(new_result)) => {
                                             if let Some(existing) = tab.result.as_mut() {
                                                 existing.rows.extend(new_result.rows);
                                                 existing.execution_time += new_result.execution_time;
                                             }
                                             tab.error = None;
                                         }
-                                        Err(e) => {
+                                        Ok(Err(e)) => {
                                             tab.error = Some(e.to_string());
+                                        }
+                                        Err(_) => {
+                                            tab.error = Some(timeout_error_message("Query"));
                                         }
                                     }
                                     tab.is_loading = false;
@@ -202,16 +264,28 @@ pub fn TableBrowser(
                         }
                         _ = token.cancelled() => {}
                     }
+                } else if let Some(tab) = tab_manager.write().tab_by_id_mut(tab_id) {
+                    tab.error = Some("Not connected to a database".into());
+                    tab.is_loading = false;
                 }
             });
         }
     };
 
+    let elapsed_ms = *loading_elapsed_ms.read();
+    let elapsed_secs = elapsed_ms as f64 / 1000.0;
+    let taking_longer = is_loading && elapsed_ms >= SLOW_WARNING_MS;
+
     rsx! {
         div { class: Styles::table_browser,
             SqlDisplay { sql: generated_sql }
             if is_loading {
-                div { class: Styles::loading, "Loading..." }
+                div { class: Styles::loading, "Loading object... {elapsed_secs:.1}s" }
+            }
+            if taking_longer {
+                div { class: Styles::slow_warning,
+                    "{slow_warning_message()}"
+                }
             }
             ResultsPanel { result, error, total_count, on_refresh: refresh,
                 if has_more && !is_loading {

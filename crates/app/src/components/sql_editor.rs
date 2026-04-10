@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use app_core::config::Theme;
 use app_core::tab_manager::{TabManager, TabType};
@@ -11,6 +12,7 @@ use uuid::Uuid;
 use super::results_panel::ResultsPanel;
 use super::sql_display::SqlDisplay;
 use crate::highlight::highlight_sql;
+use crate::operation_feedback::{OP_TIMEOUT, SLOW_WARNING_MS, slow_warning_message, timeout_error_message};
 
 #[css_module("/assets/styles/sql_editor.css")]
 struct Styles;
@@ -25,6 +27,28 @@ pub fn SqlEditor(
 ) -> Element {
     let mut tab_manager = tab_manager;
     let mut schema_info = schema_info;
+    let mut loading_started_at: Signal<Option<Instant>> = use_signal(|| None);
+    let mut loading_elapsed_ms: Signal<u128> = use_signal(|| 0);
+
+    use_future(move || async move {
+        loop {
+            tokio::time::sleep(Duration::from_millis(150)).await;
+            let is_loading = {
+                let tm = tab_manager.read();
+                tm.tab_by_id(tab_id).map(|t| t.is_loading).unwrap_or(false)
+            };
+            if is_loading {
+                let started = loading_started_at.read().unwrap_or_else(Instant::now);
+                if loading_started_at.read().is_none() {
+                    loading_started_at.set(Some(started));
+                }
+                loading_elapsed_ms.set(started.elapsed().as_millis());
+            } else {
+                loading_started_at.set(None);
+                loading_elapsed_ms.set(0);
+            }
+        }
+    });
 
     let (sql_content, result, error, is_loading, is_connected, last_query) = {
         let tm = tab_manager.read();
@@ -74,17 +98,21 @@ pub fn SqlEditor(
                 if let Some(b) = backend.read().as_ref() {
                     let b = b.clone();
                     tokio::select! {
-                        result = b.execute_query(&sql) => {
+                        result = tokio::time::timeout(OP_TIMEOUT, b.execute_query(&sql)) => {
                             if !token.is_cancelled() {
-                                let ok = result.is_ok();
+                                let ok = matches!(result, Ok(Ok(_)));
                                 if let Some(tab) = tab_manager.write().tab_by_id_mut(tab_id) {
                                     match result {
-                                        Ok(r) => {
+                                        Ok(Ok(r)) => {
                                             tab.result = Some(r);
                                             tab.error = None;
                                         }
-                                        Err(e) => {
+                                        Ok(Err(e)) => {
                                             tab.error = Some(e.to_string());
+                                            tab.result = None;
+                                        }
+                                        Err(_) => {
+                                            tab.error = Some(timeout_error_message("Query"));
                                             tab.result = None;
                                         }
                                     }
@@ -111,6 +139,10 @@ pub fn SqlEditor(
         execute_query();
     };
 
+    let elapsed_ms = *loading_elapsed_ms.read();
+    let elapsed_secs = elapsed_ms as f64 / 1000.0;
+    let taking_longer = is_loading && elapsed_ms >= SLOW_WARNING_MS;
+
     rsx! {
         div { class: Styles::editor_panel,
             if let Some(query) = &last_query {
@@ -123,6 +155,16 @@ pub fn SqlEditor(
                     disabled: is_loading || !is_connected,
                     onclick: run_query,
                     if is_loading { "Running..." } else { "Run" }
+                }
+            }
+            if is_loading {
+                div { class: Styles::query_status,
+                    "Running query... {elapsed_secs:.1}s"
+                }
+            }
+            if taking_longer {
+                div { class: Styles::slow_warning,
+                    "{slow_warning_message()}"
                 }
             }
             {

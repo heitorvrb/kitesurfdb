@@ -35,6 +35,26 @@
     color: var(--text-secondary);
 }
 
+.connecting-status {
+    margin-bottom: 10px;
+    padding: 8px 10px;
+    border-radius: 4px;
+    border-left: 3px solid var(--accent);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 12px;
+}
+
+.connecting-warning {
+    margin-bottom: 12px;
+    padding: 8px 10px;
+    border-radius: 4px;
+    border-left: 3px solid var(--error);
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
 /* Saved connections */
 .saved-connections {
     margin-bottom: 16px;
@@ -165,6 +185,14 @@
 
 .connect-btn:hover {
     background: var(--success-hover);
+}
+
+.connect-btn:disabled,
+.cancel-btn:disabled,
+.quick-connect-btn:disabled,
+.delete-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
 }
 
 .cancel-btn {

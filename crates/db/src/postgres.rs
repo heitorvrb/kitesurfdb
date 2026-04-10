@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use sqlx::postgres::{PgPool, PgPoolOptions, PgRow};
 use sqlx::{Column, Row};
+use std::time::Duration;
 use std::time::Instant;
 
 use crate::error::DbError;
@@ -36,10 +37,29 @@ impl DbBackend for PostgresBackend {
             );
         }
 
+        let timeout_url = if url.contains('?') {
+            format!("{url}&connect_timeout=8")
+        } else {
+            format!("{url}?connect_timeout=8")
+        };
+
         let pool = PgPoolOptions::new()
             .max_connections(5)
-            .connect(&url)
-            .await?;
+            .acquire_timeout(Duration::from_secs(8))
+            .connect(&timeout_url)
+            .await
+            .map_err(|e| {
+                let msg = e.to_string();
+                if msg.contains("timed out") {
+                    DbError::ConnectionFailed(format!(
+                        "Could not connect to PostgreSQL at {host}:{port} within 8s. The server may be offline or unreachable."
+                    ))
+                } else {
+                    DbError::ConnectionFailed(format!(
+                        "Could not connect to PostgreSQL at {host}:{port}: {msg}"
+                    ))
+                }
+            })?;
 
         Ok(Self { pool })
     }

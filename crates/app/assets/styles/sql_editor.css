@@ -35,6 +35,18 @@
     cursor: not-allowed;
 }
 
+.query-status {
+    padding: 8px 12px;
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.slow-warning {
+    padding: 0 12px 8px;
+    color: var(--error);
+    font-size: 12px;
+}
+
 .editor-container {
     position: relative;
     min-height: 120px;
