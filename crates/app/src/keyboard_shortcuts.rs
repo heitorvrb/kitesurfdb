@@ -34,6 +34,12 @@ pub fn use_keyboard_shortcuts(
                 if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'n') {
                     e.preventDefault();
                     dioxus.send('NEW_EDITOR_TAB');
+                    return;
+                }
+
+                if ((e.ctrlKey || e.metaKey) && (e.code === 'Tab' || e.key === 'Tab' || e.key === 'ISO_Left_Tab')) {
+                    e.preventDefault();
+                    dioxus.send((e.shiftKey || e.key === 'ISO_Left_Tab') ? 'PREV_TAB' : 'NEXT_TAB');
                 }
             });
             await new Promise(() => {});
@@ -45,6 +51,8 @@ pub fn use_keyboard_shortcuts(
                 Ok(key) if key == "F5" => on_f5(tab_manager, backend, schema_info).await,
                 Ok(key) if key == "CLOSE_TAB" => on_close_tab(tab_manager),
                 Ok(key) if key == "NEW_EDITOR_TAB" => on_new_editor_tab(tab_manager, backend),
+                Ok(key) if key == "NEXT_TAB" => on_next_tab(tab_manager),
+                Ok(key) if key == "PREV_TAB" => on_prev_tab(tab_manager),
                 _ => break,
             }
         }
@@ -66,6 +74,14 @@ fn on_new_editor_tab(mut tab_manager: Signal<TabManager>, backend: Signal<Option
     if backend.read().is_some() {
         tab_manager.write().open_sql_editor();
     }
+}
+
+fn on_next_tab(mut tab_manager: Signal<TabManager>) {
+    tab_manager.write().activate_next_tab();
+}
+
+fn on_prev_tab(mut tab_manager: Signal<TabManager>) {
+    tab_manager.write().activate_previous_tab();
 }
 
 async fn on_f5(

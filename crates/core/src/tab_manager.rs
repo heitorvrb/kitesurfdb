@@ -131,6 +131,34 @@ impl TabManager {
         }
     }
 
+    pub fn activate_next_tab(&mut self) -> bool {
+        if self.tabs.is_empty() {
+            return false;
+        }
+
+        let current_index = self
+            .active_tab_id
+            .and_then(|id| self.tabs.iter().position(|t| t.id == id))
+            .unwrap_or(0);
+        let next_index = (current_index + 1) % self.tabs.len();
+        self.active_tab_id = Some(self.tabs[next_index].id);
+        true
+    }
+
+    pub fn activate_previous_tab(&mut self) -> bool {
+        if self.tabs.is_empty() {
+            return false;
+        }
+
+        let current_index = self
+            .active_tab_id
+            .and_then(|id| self.tabs.iter().position(|t| t.id == id))
+            .unwrap_or(0);
+        let prev_index = (current_index + self.tabs.len() - 1) % self.tabs.len();
+        self.active_tab_id = Some(self.tabs[prev_index].id);
+        true
+    }
+
     pub fn open_sql_editor(&mut self) -> Uuid {
         let n = self.tabs.iter()
             .filter_map(|t| {
@@ -488,5 +516,72 @@ mod tests {
         // id2 is active
         tm.close_tab(id1);
         assert_eq!(tm.active_tab_id(), Some(id2));
+    }
+
+    #[test]
+    fn test_activate_next_tab_wraps() {
+        let mut tm = TabManager::new();
+        let id1 = tm.open_tab(
+            "First".into(),
+            TabType::SqlEditor {
+                sql_content: String::new(),
+            },
+        );
+        let id2 = tm.open_tab(
+            "Second".into(),
+            TabType::SqlEditor {
+                sql_content: String::new(),
+            },
+        );
+        let id3 = tm.open_tab(
+            "Third".into(),
+            TabType::SqlEditor {
+                sql_content: String::new(),
+            },
+        );
+
+        assert_eq!(tm.active_tab_id(), Some(id3));
+        assert!(tm.activate_next_tab());
+        assert_eq!(tm.active_tab_id(), Some(id1));
+        assert!(tm.activate_next_tab());
+        assert_eq!(tm.active_tab_id(), Some(id2));
+    }
+
+    #[test]
+    fn test_activate_previous_tab_wraps() {
+        let mut tm = TabManager::new();
+        let id1 = tm.open_tab(
+            "First".into(),
+            TabType::SqlEditor {
+                sql_content: String::new(),
+            },
+        );
+        let id2 = tm.open_tab(
+            "Second".into(),
+            TabType::SqlEditor {
+                sql_content: String::new(),
+            },
+        );
+        let id3 = tm.open_tab(
+            "Third".into(),
+            TabType::SqlEditor {
+                sql_content: String::new(),
+            },
+        );
+
+        assert_eq!(tm.active_tab_id(), Some(id3));
+        assert!(tm.activate_previous_tab());
+        assert_eq!(tm.active_tab_id(), Some(id2));
+        assert!(tm.activate_previous_tab());
+        assert_eq!(tm.active_tab_id(), Some(id1));
+        assert!(tm.activate_previous_tab());
+        assert_eq!(tm.active_tab_id(), Some(id3));
+    }
+
+    #[test]
+    fn test_activate_tab_navigation_empty() {
+        let mut tm = TabManager::new();
+        assert!(!tm.activate_next_tab());
+        assert!(!tm.activate_previous_tab());
     }
 }
