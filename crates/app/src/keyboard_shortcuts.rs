@@ -27,6 +27,12 @@ pub fn use_keyboard_shortcuts(
                 if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'w') {
                     e.preventDefault();
                     dioxus.send('CLOSE_TAB');
+                    return;
+                }
+
+                if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'n') {
+                    e.preventDefault();
+                    dioxus.send('NEW_EDITOR_TAB');
                 }
             });
             await new Promise(() => {});
@@ -37,6 +43,7 @@ pub fn use_keyboard_shortcuts(
             match eval.recv::<String>().await {
                 Ok(key) if key == "F5" => on_f5(tab_manager, backend, schema_info).await,
                 Ok(key) if key == "CLOSE_TAB" => on_close_tab(tab_manager),
+                Ok(key) if key == "NEW_EDITOR_TAB" => on_new_editor_tab(tab_manager, backend),
                 _ => break,
             }
         }
@@ -51,6 +58,12 @@ fn on_close_tab(mut tab_manager: Signal<TabManager>) {
 
     if let Some(id) = active_tab_id {
         tab_manager.write().close_tab(id);
+    }
+}
+
+fn on_new_editor_tab(mut tab_manager: Signal<TabManager>, backend: Signal<Option<Arc<dyn DbBackend>>>) {
+    if backend.read().is_some() {
+        tab_manager.write().open_sql_editor();
     }
 }
 

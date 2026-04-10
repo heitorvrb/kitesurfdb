@@ -166,7 +166,7 @@ User action (Run button / Ctrl+Enter / click table in sidebar)
 
 - [x] In an sql editor, hitting F5 should do the same as the Run button 
 - [x] Ctrl+W should close the tab
-- [ ] Ctrl+N should open a new editor tab
+- [x] Ctrl+N should open a new editor tab
 - [ ] Ctrl+tab to move to the right tab, Ctrl+shift+tab to move to the left tab
 
 
