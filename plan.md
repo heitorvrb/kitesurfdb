@@ -176,7 +176,7 @@ User action (Run button / Ctrl+Enter / click table in sidebar)
   5. While the refresh timer is running, hit disconnect
   6. The program will panic.
 
-- [ ] Ctrl+tab to move to the right tab, Ctrl+shift+tab to move to the left tab
+- [x] Ctrl+tab to move to the right tab, Ctrl+shift+tab to move to the left tab
 
 
 - [ ] Search funcionality, open a modal to type something and find any database object (table, function, view, trigger) with that name. Acessible via a Search option in the top system menu or via shortcut Ctrl+F.
