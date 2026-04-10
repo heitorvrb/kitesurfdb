@@ -164,8 +164,9 @@ User action (Run button / Ctrl+Enter / click table in sidebar)
 - [x] F5 should refresh the results of the opened tab
 - [x] Middle click on the tab handle should close the tab
 
-- [ ] In an sql editor, hitting F5 should do the same as the Run button 
-- [ ] Ctrl+W should close the tab
+- [x] In an sql editor, hitting F5 should do the same as the Run button 
+- [x] Ctrl+W should close the tab
+- [ ] Ctrl+N should open a new editor tab
 - [ ] Ctrl+tab to move to the right tab, Ctrl+shift+tab to move to the left tab
 
 

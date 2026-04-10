@@ -21,6 +21,12 @@ pub fn use_keyboard_shortcuts(
                 if (e.key === 'F5') {
                     e.preventDefault();
                     dioxus.send('F5');
+                    return;
+                }
+
+                if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'w') {
+                    e.preventDefault();
+                    dioxus.send('CLOSE_TAB');
                 }
             });
             await new Promise(() => {});
@@ -30,10 +36,22 @@ pub fn use_keyboard_shortcuts(
         loop {
             match eval.recv::<String>().await {
                 Ok(key) if key == "F5" => on_f5(tab_manager, backend, schema_info).await,
+                Ok(key) if key == "CLOSE_TAB" => on_close_tab(tab_manager),
                 _ => break,
             }
         }
     });
+}
+
+fn on_close_tab(mut tab_manager: Signal<TabManager>) {
+    let active_tab_id = {
+        let tm = tab_manager.read();
+        tm.active_tab_id()
+    };
+
+    if let Some(id) = active_tab_id {
+        tab_manager.write().close_tab(id);
+    }
 }
 
 async fn on_f5(
@@ -82,6 +100,9 @@ async fn on_f5(
                         }
                         _ = token.cancelled() => {}
                     }
+                } else if let Some(tab) = tab_manager.write().tab_by_id_mut(id) {
+                    tab.error = Some("Not connected to a database".into());
+                    tab.is_loading = false;
                 }
             }
         }
