@@ -164,6 +164,14 @@ User action (Run button / Ctrl+Enter / click table in sidebar)
 - [x] F5 should refresh the results of the opened tab
 - [x] Middle click on the tab handle should close the tab
 
+- [ ] In an sql editor, hitting F5 should do the same as the Run button 
+- [ ] Ctrl+W should close the tab
+- [ ] Ctrl+tab to move to the right tab, Ctrl+shift+tab to move to the left tab
+
+
+- [ ] Search funcionality, open a modal to type something and find any database object (table, function, view, trigger) with that name. Acessible via a Search option in the top system menu or via shortcut Ctrl+F.
+- [ ] Ordering on any tab, editor, table or view. Clicking on the column header cycles between adding it to the sql as order asc, order desc, or removing it from the order portion of the sql.
+
 
 
 ### Future (Phase 6+)
