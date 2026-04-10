@@ -92,8 +92,8 @@ pub fn DefinitionView(
                 }
 
                 spawn(async move {
-                    if let Some(b) = backend.read().as_ref() {
-                        let b = b.clone();
+                    let b = { backend.read().as_ref().cloned() };
+                    if let Some(b) = b {
                         tokio::select! {
                             result = tokio::time::timeout(OP_TIMEOUT, b.get_object_definition(&name, schema.as_deref(), &object_type)) => {
                                 if !token.is_cancelled() {

@@ -33,17 +33,21 @@ pub fn ConnectionBar(
     let disconnect = move |_| {
         let mut backend = backend;
         spawn(async move {
-            // Take active backend (quick write, released before await)
-            let prev = connection_manager.write().take_active();
-            if let Some(b) = prev {
-                let _ = b.disconnect().await;
-            }
-            backend.set(None);
-            is_connected.set(false);
-            schema_info.set(None);
+            // Cancel/close tabs first so in-flight operations stop before backend teardown.
             let ids: Vec<_> = tab_manager.read().tabs().iter().map(|t| t.id).collect();
             for id in ids {
                 tab_manager.write().close_tab(id);
+            }
+
+            // Clear UI connection state immediately.
+            backend.set(None);
+            is_connected.set(false);
+            schema_info.set(None);
+
+            // Take and disconnect backend last.
+            let prev = connection_manager.write().take_active();
+            if let Some(b) = prev {
+                let _ = b.disconnect().await;
             }
         });
     };
