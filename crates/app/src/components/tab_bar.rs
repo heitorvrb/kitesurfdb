@@ -1,4 +1,5 @@
 use app_core::tab_manager::TabManager;
+use dioxus::html::input_data::MouseButton;
 use dioxus::prelude::*;
 
 #[css_module("/assets/styles/tab_bar.css")]
@@ -24,6 +25,12 @@ pub fn TabBar(tab_manager: Signal<TabManager>, is_connected: Signal<bool>) -> El
                         div {
                             class: if *is_active { format!("{} {}", Styles::tab, Styles::active) } else { Styles::tab.to_string() },
                             onclick: move |_| { tab_manager.write().set_active(id); },
+                            onmousedown: move |evt| {
+                                if evt.trigger_button() == Some(MouseButton::Auxiliary) {
+                                    evt.stop_propagation();
+                                    tab_manager.write().close_tab(id);
+                                }
+                            },
                             span { "{title}" }
                             button {
                                 class: Styles::close_btn,

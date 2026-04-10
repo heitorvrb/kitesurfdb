@@ -161,9 +161,19 @@ User action (Run button / Ctrl+Enter / click table in sidebar)
 - [x] Together with Rows: 100 | Time: 17.17839ms, show a refresh button. Clicking it should re-do the query(ies).
 - [x] When a table has no lines, show the header with its columns anyway.
 - [x] Add a button to show/hide the sidebar, and make it permanent by saving its state to the configuration.json file.
-- [ ] F5 should refresh the results of the opened tab
-- [ ] Middle click on the tab handle should close the tab
+- [x] F5 should refresh the results of the opened tab
+- [x] Middle click on the tab handle should close the tab
 
+- [ ] In an sql editor, hitting F5 should do the same as the Run button 
+- [ ] Ctrl+W should close the tab
+- [ ] Ctrl+tab to move to the right tab, Ctrl+shift+tab to move to the left tab
+
+
+- [ ] Search funcionality, open a modal to type something and find any database object (table, function, view, trigger) with that name. Acessible via a Search option in the top system menu or via shortcut Ctrl+F.
+- [ ] Ordering on any tab, editor, table or view. Clicking on the column header cycles between adding it to the sql as order asc, order desc, or removing it from the order portion of the sql.
+
+### Phase 7 - Edit inline
+- [ ] When I click on a cell of a results tab, be it in the sql editor or a table, it should open an input in place for editing. If the user edits the value and hits enter, it should show as an edited cell by a different color. If any cell is edited, at the bottom a "Save" button should appear. When clicked, it should pick any lines where a cell was edited and do an SQL UPDATE statement for each of those lines.
 
 
 ### Future (Phase 6+)
