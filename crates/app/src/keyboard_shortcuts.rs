@@ -31,7 +31,7 @@ pub fn use_keyboard_shortcuts(
                     return;
                 }
 
-                if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'n') {
+                if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 't') {
                     e.preventDefault();
                     dioxus.send('NEW_EDITOR_TAB');
                     return;
