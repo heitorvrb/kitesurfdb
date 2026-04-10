@@ -161,8 +161,8 @@ User action (Run button / Ctrl+Enter / click table in sidebar)
 - [x] Together with Rows: 100 | Time: 17.17839ms, show a refresh button. Clicking it should re-do the query(ies).
 - [x] When a table has no lines, show the header with its columns anyway.
 - [x] Add a button to show/hide the sidebar, and make it permanent by saving its state to the configuration.json file.
-- [ ] F5 should refresh the results of the opened tab
-- [ ] Middle click on the tab handle should close the tab
+- [x] F5 should refresh the results of the opened tab
+- [x] Middle click on the tab handle should close the tab
 
 
 
