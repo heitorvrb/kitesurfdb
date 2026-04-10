@@ -75,6 +75,17 @@ impl TabManager {
         self.tabs.iter_mut().find(|t| t.id == id)
     }
 
+    /// Reset a tab's result state so it re-fetches on next render.
+    /// Used by both the Refresh button and the F5 shortcut.
+    pub fn reset_for_refresh(&mut self, id: Uuid) {
+        if let Some(tab) = self.tab_by_id_mut(id) {
+            tab.result = None;
+            tab.total_count = None;
+            tab.error = None;
+            tab.is_loading = false;
+        }
+    }
+
     pub fn open_tab(&mut self, title: String, tab_type: TabType) -> Uuid {
         let id = Uuid::new_v4();
         self.tabs.push(Tab {

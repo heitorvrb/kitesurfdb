@@ -1,6 +1,7 @@
 mod app;
 mod components;
 mod highlight;
+mod keyboard_shortcuts;
 
 use dioxus::desktop::{Config, WindowBuilder};
 use dioxus::desktop::tao::window::Theme;

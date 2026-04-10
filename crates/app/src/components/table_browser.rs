@@ -144,12 +144,7 @@ pub fn TableBrowser(
     let has_more = row_count > 0 && row_count % PAGE_SIZE == 0;
 
     let refresh = move |_| {
-        if let Some(tab) = tab_manager.write().tab_by_id_mut(tab_id) {
-            tab.result = None;
-            tab.total_count = None;
-            tab.error = None;
-            tab.is_loading = false;
-        }
+        tab_manager.write().reset_for_refresh(tab_id);
     };
 
     let load_more = move |_| {

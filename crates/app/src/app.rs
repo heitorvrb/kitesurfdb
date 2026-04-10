@@ -8,6 +8,7 @@ use db::types::SchemaInfo;
 use dioxus::prelude::*;
 
 use crate::components::{ConnectionBar, EditorArea, Sidebar};
+use crate::keyboard_shortcuts::use_keyboard_shortcuts;
 
 #[css_module("/assets/styles/main.css")]
 struct Styles;
@@ -22,6 +23,8 @@ pub fn App() -> Element {
     let prefs = config::load_preferences();
     let theme: Signal<Theme> = use_signal(|| prefs.theme);
     let sidebar_visible: Signal<bool> = use_signal(|| prefs.sidebar_visible);
+
+    use_keyboard_shortcuts(tab_manager, backend, schema_info);
 
     let theme_str = theme.read().as_str();
 
@@ -49,11 +52,11 @@ pub fn App() -> Element {
                     }
                 }
                 EditorArea {
-                  tab_manager,
-                  backend,
-                  schema_info,
-                  theme,
-                  is_connected,
+                    tab_manager,
+                    backend,
+                    schema_info,
+                    theme,
+                    is_connected,
                 }
             }
         }
