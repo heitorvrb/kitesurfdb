@@ -11,6 +11,12 @@
     font-size: 13px;
 }
 
+.slow-warning {
+    padding: 0 12px 12px;
+    color: var(--error);
+    font-size: 12px;
+}
+
 .load-more-bar {
     display: flex;
     justify-content: center;

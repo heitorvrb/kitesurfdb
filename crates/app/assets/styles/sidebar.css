@@ -38,6 +38,23 @@
     color: var(--text-primary);
 }
 
+.refresh-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.refresh-status {
+    padding: 8px 12px 0;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.slow-warning {
+    padding: 4px 12px 8px;
+    font-size: 12px;
+    color: var(--error);
+}
+
 .sidebar-empty {
     padding: 16px;
     font-size: 12px;

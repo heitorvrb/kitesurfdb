@@ -4,6 +4,7 @@ use app_core::tab_manager::{TabManager, TabType};
 use db::traits::DbBackend;
 use db::types::SchemaInfo;
 use dioxus::prelude::*;
+use crate::operation_feedback::{OP_TIMEOUT, timeout_error_message};
 
 /// Registers global keyboard shortcut handlers for the application.
 ///
@@ -94,13 +95,17 @@ async fn on_f5(
                 let b = backend.read().as_ref().map(|b| b.clone());
                 if let Some(b) = b {
                     tokio::select! {
-                        result = b.execute_query(&sql_content) => {
+                        result = tokio::time::timeout(OP_TIMEOUT, b.execute_query(&sql_content)) => {
                             if !token.is_cancelled() {
-                                let ok = result.is_ok();
+                                let ok = matches!(result, Ok(Ok(_)));
                                 if let Some(tab) = tab_manager.write().tab_by_id_mut(id) {
                                     match result {
-                                        Ok(r) => { tab.result = Some(r); tab.error = None; }
-                                        Err(e) => { tab.error = Some(e.to_string()); tab.result = None; }
+                                        Ok(Ok(r)) => { tab.result = Some(r); tab.error = None; }
+                                        Ok(Err(e)) => { tab.error = Some(e.to_string()); tab.result = None; }
+                                        Err(_) => {
+                                            tab.error = Some(timeout_error_message("Query"));
+                                            tab.result = None;
+                                        }
                                     }
                                     tab.is_loading = false;
                                 }

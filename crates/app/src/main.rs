@@ -2,6 +2,7 @@ mod app;
 mod components;
 mod highlight;
 mod keyboard_shortcuts;
+mod operation_feedback;
 
 use dioxus::desktop::{Config, WindowBuilder};
 use dioxus::desktop::tao::window::Theme;
