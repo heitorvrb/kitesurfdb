@@ -95,8 +95,8 @@ pub fn SqlEditor(
             }
 
             spawn(async move {
-                if let Some(b) = backend.read().as_ref() {
-                    let b = b.clone();
+                let b = { backend.read().as_ref().cloned() };
+                if let Some(b) = b {
                     tokio::select! {
                         result = tokio::time::timeout(OP_TIMEOUT, b.execute_query(&sql)) => {
                             if !token.is_cancelled() {

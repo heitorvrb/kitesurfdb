@@ -167,6 +167,15 @@ User action (Run button / Ctrl+Enter / click table in sidebar)
 - [x] In an sql editor, hitting F5 should do the same as the Run button 
 - [x] Ctrl+W should close the tab
 - [x] Ctrl+N should open a new editor tab
+
+- [x] Fix this bug:
+  1. Connect to a postgres database
+  2. Open a table from the sidebar
+  3. Turn the database off
+  4. Hit refresh
+  5. While the refresh timer is running, hit disconnect
+  6. The program will panic.
+
 - [ ] Ctrl+tab to move to the right tab, Ctrl+shift+tab to move to the left tab
 
 

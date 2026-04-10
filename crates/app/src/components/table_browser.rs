@@ -87,8 +87,8 @@ pub fn TableBrowser(
                 }
 
                 spawn(async move {
-                    if let Some(b) = backend.read().as_ref() {
-                        let b = b.clone();
+                    let b = { backend.read().as_ref().cloned() };
+                    if let Some(b) = b {
                         let started_at = Instant::now();
 
                         // Step 1: count query — bail early on error, set total_count if > 0
@@ -237,8 +237,8 @@ pub fn TableBrowser(
             }
 
             spawn(async move {
-                if let Some(b) = backend.read().as_ref() {
-                    let b = b.clone();
+                let b = { backend.read().as_ref().cloned() };
+                if let Some(b) = b {
                     tokio::select! {
                         result = tokio::time::timeout(OP_TIMEOUT, b.execute_query(&sql)) => {
                             if !token.is_cancelled() {
