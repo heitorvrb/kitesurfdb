@@ -7,7 +7,7 @@ use db::traits::DbBackend;
 use db::types::SchemaInfo;
 use dioxus::prelude::*;
 
-use crate::components::{ConnectionBar, EditorArea, Sidebar};
+use crate::components::{ConnectionBar, EditorArea, SearchModal, Sidebar};
 use crate::keyboard_shortcuts::use_keyboard_shortcuts;
 
 #[css_module("/assets/styles/main.css")]
@@ -23,8 +23,9 @@ pub fn App() -> Element {
     let prefs = config::load_preferences();
     let theme: Signal<Theme> = use_signal(|| prefs.theme);
     let sidebar_visible: Signal<bool> = use_signal(|| prefs.sidebar_visible);
+    let show_search_modal: Signal<bool> = use_signal(|| false);
 
-    use_keyboard_shortcuts(tab_manager, backend, schema_info);
+    use_keyboard_shortcuts(tab_manager, backend, schema_info, show_search_modal);
 
     let theme_str = theme.read().as_str();
 
@@ -40,6 +41,7 @@ pub fn App() -> Element {
                 connection_manager,
                 theme,
                 sidebar_visible,
+                show_search_modal,
             }
             div { class: Styles::main_layout,
                 if *sidebar_visible.read() {
@@ -56,6 +58,14 @@ pub fn App() -> Element {
                     backend,
                     schema_info,
                     theme,
+                    is_connected,
+                }
+            }
+            if *show_search_modal.read() {
+                SearchModal {
+                    show_search_modal,
+                    schema_info,
+                    tab_manager,
                     is_connected,
                 }
             }

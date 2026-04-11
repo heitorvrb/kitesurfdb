@@ -21,6 +21,7 @@ pub fn ConnectionBar(
     connection_manager: Signal<ConnectionManager>,
     theme: Signal<Theme>,
     sidebar_visible: Signal<bool>,
+    show_search_modal: Signal<bool>,
 ) -> Element {
     let connection_error: Signal<Option<String>> = use_signal(|| None);
     let mut is_connected = is_connected;
@@ -28,6 +29,7 @@ pub fn ConnectionBar(
     let mut tab_manager = tab_manager;
     let mut theme = theme;
     let mut sidebar_visible = sidebar_visible;
+    let mut show_search_modal = show_search_modal;
     let mut show_dialog = use_signal(|| false);
 
     let disconnect = move |_| {
@@ -77,6 +79,12 @@ pub fn ConnectionBar(
                 if sidebar_shown { "‹" } else { "›" }
             }
             h1 { "Kitesurf" }
+            button {
+                class: Styles::search_btn,
+                disabled: !*is_connected.read(),
+                onclick: move |_| show_search_modal.set(true),
+                "Search"
+            }
             button {
                 class: Styles::theme_btn,
                 onclick: move |_| {

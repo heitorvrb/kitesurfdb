@@ -14,6 +14,7 @@ pub fn use_keyboard_shortcuts(
     tab_manager: Signal<TabManager>,
     backend: Signal<Option<Arc<dyn DbBackend>>>,
     schema_info: Signal<Option<SchemaInfo>>,
+    show_search_modal: Signal<bool>,
 ) {
     use_future(move || async move {
         let mut eval = document::eval(
@@ -40,6 +41,12 @@ pub fn use_keyboard_shortcuts(
                 if ((e.ctrlKey || e.metaKey) && (e.code === 'Tab' || e.key === 'Tab' || e.key === 'ISO_Left_Tab')) {
                     e.preventDefault();
                     dioxus.send((e.shiftKey || e.key === 'ISO_Left_Tab') ? 'PREV_TAB' : 'NEXT_TAB');
+                    return;
+                }
+
+                if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+                    e.preventDefault();
+                    dioxus.send('OPEN_SEARCH');
                 }
             });
             await new Promise(() => {});
@@ -53,6 +60,7 @@ pub fn use_keyboard_shortcuts(
                 Ok(key) if key == "NEW_EDITOR_TAB" => on_new_editor_tab(tab_manager, backend),
                 Ok(key) if key == "NEXT_TAB" => on_next_tab(tab_manager),
                 Ok(key) if key == "PREV_TAB" => on_prev_tab(tab_manager),
+                Ok(key) if key == "OPEN_SEARCH" => on_open_search(show_search_modal),
                 _ => break,
             }
         }
@@ -82,6 +90,10 @@ fn on_next_tab(mut tab_manager: Signal<TabManager>) {
 
 fn on_prev_tab(mut tab_manager: Signal<TabManager>) {
     tab_manager.write().activate_previous_tab();
+}
+
+fn on_open_search(mut show_search_modal: Signal<bool>) {
+    show_search_modal.set(true);
 }
 
 async fn on_f5(

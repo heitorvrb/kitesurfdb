@@ -42,6 +42,28 @@
     margin-right: 8px;
 }
 
+.search-btn {
+    padding: 4px 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+    background: none;
+    color: var(--text-secondary);
+    margin-right: 8px;
+}
+
+.search-btn:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.search-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 .theme-btn:hover {
     background: var(--bg-tertiary);
     color: var(--text-primary);
