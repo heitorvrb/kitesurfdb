@@ -179,7 +179,7 @@ User action (Run button / Ctrl+Enter / click table in sidebar)
 - [x] Ctrl+tab to move to the right tab, Ctrl+shift+tab to move to the left tab
 
 
-- [ ] Search funcionality, open a modal to type something and find any database object (table, function, view, trigger) with that name. Acessible via a Search option in the top system menu or via shortcut Ctrl+F.
+- [x] Search funcionality, open a modal to type something and find any database object (table, function, view, trigger) with that name. Acessible via a Search option in the top system menu or via shortcut Ctrl+F.
 - [ ] Ordering on any tab, editor, table or view. Clicking on the column header cycles between adding it to the sql as order asc, order desc, or removing it from the order portion of the sql.
 
 ### Phase 7 - Edit inline

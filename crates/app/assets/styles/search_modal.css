@@ -120,3 +120,9 @@
     padding: 0 16px 16px;
     font-size: 13px;
 }
+
+.wildcard-help {
+    color: var(--text-secondary);
+    font-size: 12px;
+    padding: 0 16px 12px;
+}

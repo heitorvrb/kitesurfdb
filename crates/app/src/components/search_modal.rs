@@ -46,7 +46,7 @@ pub fn SearchModal(
             .filter(|obj| {
                 let name = obj.name.to_lowercase();
                 let qualified = qualified_name(obj).to_lowercase();
-                name.contains(&q) || qualified.contains(&q)
+                matches_pattern(&name, &q) || matches_pattern(&qualified, &q)
             })
             .take(200)
             .collect()
@@ -152,8 +152,60 @@ pub fn SearchModal(
                         }
                     }
                 }
+                div {
+                    class: Styles::wildcard_help,
+                    "Supported wildcards: *, $."
+                }
             }
         }
+    }
+}
+
+fn matches_pattern(candidate: &str, pattern: &str) -> bool {
+    if pattern.is_empty() {
+        return true;
+    }
+
+    let ends_with = pattern.ends_with('$');
+    let pattern = if ends_with {
+        &pattern[..pattern.len() - 1]
+    } else {
+        pattern
+    };
+
+    if pattern.is_empty() {
+        return true;
+    }
+
+    let parts: Vec<&str> = pattern.split('*').collect();
+
+    if parts.len() == 1 {
+        return if ends_with {
+            candidate.ends_with(parts[0])
+        } else {
+            candidate.contains(parts[0])
+        };
+    }
+
+    let mut pos = 0usize;
+    for part in &parts {
+        if part.is_empty() {
+            continue;
+        }
+        let Some(found_at) = candidate[pos..].find(part) else {
+            return false;
+        };
+        pos += found_at + part.len();
+    }
+
+    if ends_with {
+        if let Some(last) = parts.iter().rev().find(|p| !p.is_empty()) {
+            candidate.ends_with(last)
+        } else {
+            true
+        }
+    } else {
+        true
     }
 }
 
