@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Kitesurf
+GenericName=Database Client
+Comment=Desktop database client for SQLite and PostgreSQL
+Exec=kitesurfdb
+Icon=kitesurfdb
+Terminal=false
+Categories=Database;Development;Utility;
+Keywords=database;sql;sqlite;postgres;query;
+StartupWMClass=kitesurfdb

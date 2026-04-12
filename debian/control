@@ -1,0 +1,26 @@
+Source: kitesurfdb
+Section: database
+Priority: optional
+Maintainer: Heitor Rodrigues <heitor.vrb@gmail.com>
+Build-Depends: debhelper-compat (= 13),
+               libwebkit2gtk-4.1-dev,
+               libjavascriptcoregtk-4.1-dev,
+               libsoup-3.0-dev,
+               libgtk-3-dev,
+               libxdo-dev,
+               libssl-dev,
+               libsqlite3-dev,
+               pkg-config
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+
+Package: kitesurfdb
+Architecture: amd64
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Lightweight desktop database client for SQLite and PostgreSQL
+ Kitesurf is a cross-platform desktop database client written in Rust
+ using Dioxus. It supports SQLite and PostgreSQL with a tabbed interface,
+ SQL editor with syntax highlighting, table browser, and schema introspection.
+ .
+ Features include saved connections with OS keyring password storage,
+ light and dark themes, and low resource usage.

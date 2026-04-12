@@ -1,0 +1,56 @@
+#!/usr/bin/make -f
+
+# Requires pre-installed (not in Debian archive):
+#   rustc, cargo  - https://rustup.rs
+#   dx            - cargo install dioxus-cli
+
+# Resolve the real user home via passwd (dpkg-buildpackage sanitizes env)
+REAL_HOME := $(shell getent passwd $$(id -u) | cut -d: -f6)
+export RUSTUP_HOME := $(REAL_HOME)/.rustup
+export CARGO_HOME  := $(REAL_HOME)/.cargo
+export RUSTUP_TOOLCHAIN := stable
+export PATH := $(CARGO_HOME)/bin:$(PATH)
+
+# Prevent cargo/dx from writing to the real HOME during build
+export HOME := $(CURDIR)/debian/.fakehome
+
+# dx bundle output paths
+DX_APP    := target/dx/kitesurfdb/release/linux/app
+DX_BINARY := $(DX_APP)/kitesurfdb
+DX_ASSETS := $(DX_APP)/assets
+
+# Runtime asset location (Dioxus resolves ../../lib/*/assets/ relative to binary)
+ASSET_DEST := usr/lib/Kitesurfdb/assets
+
+%:
+	dh $@
+
+override_dh_auto_clean:
+	rm -rf target/dx/kitesurfdb/bundle target/dx/kitesurfdb/release
+	rm -rf debian/.fakehome
+
+override_dh_auto_build:
+	mkdir -p debian/.fakehome
+	dx bundle --desktop --package kitesurfdb --release
+
+override_dh_auto_install:
+	install -D -m 0755 $(DX_BINARY) \
+		debian/kitesurfdb/usr/bin/kitesurfdb
+	mkdir -p debian/kitesurfdb/$(ASSET_DEST)
+	cp -a $(DX_ASSETS)/*.css debian/kitesurfdb/$(ASSET_DEST)/
+	install -D -m 0644 debian/kitesurfdb.desktop \
+		debian/kitesurfdb/usr/share/applications/kitesurfdb.desktop
+	install -D -m 0644 crates/app/assets/icon.png \
+		debian/kitesurfdb/usr/share/pixmaps/kitesurfdb.png
+
+override_dh_auto_test:
+	:
+
+override_dh_builddeb:
+	dh_builddeb --destdir=.
+
+override_dh_strip:
+	dh_strip --no-automatic-dbgsym
+
+override_dh_shlibdeps:
+	dh_shlibdeps -l/usr/lib/x86_64-linux-gnu
