@@ -1,0 +1,7 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: kitesurfdb
+Upstream-Contact: Heitor Rodrigues <heitor.vrb@gmail.com>
+
+Files: *
+Copyright: 2026 Heitor Rodrigues
+License: Unlicensed

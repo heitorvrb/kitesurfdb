@@ -1,2 +1,12 @@
 .claude
 target
+kitesurfdb*.deb
+kitesurfdb*.buildinfo
+kitesurfdb*.changes
+debian/.fakehome/
+debian/.debhelper/
+debian/kitesurfdb.debhelper.log
+debian/kitesurfdb.substvars
+debian/debhelper-build-stamp
+debian/kitesurfdb/
+debian/files

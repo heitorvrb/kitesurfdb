@@ -1,0 +1,5 @@
+kitesurfdb (0.1.2) trixie; urgency=low
+
+  * Initial Debian packaging.
+
+ -- Heitor Rodrigues <heitor.vrb@gmail.com>  Sun, 12 Apr 2026 17:00:00 +0000
