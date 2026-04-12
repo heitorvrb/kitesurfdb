@@ -46,3 +46,7 @@ dpkg-deb -c kitesurfdb_*.deb   # list installed files
 ```bash
 sudo dpkg -i kitesurfdb_*.deb
 ```
+
+## Create a release in github:
+
+gh release create v0.1.2 ./kitesurfdb_0.1.2_amd64.deb --title "v0.1.2" --notes "Release v0.1.2"
