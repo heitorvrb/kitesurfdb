@@ -1,7 +1,8 @@
 [application]
-name = "kitesurfdb"
+name = "Kitesurf"
 
 [bundle]
+name = "Kitesurf"
 identifier = "com.heitorvrb.kitesurfdb"
 publisher = "Heitor Rodrigues"
 icon = ["assets/icon.png"]
