@@ -50,7 +50,7 @@ pub fn SqlEditor(
         }
     });
 
-    let (sql_content, result, error, is_loading, is_connected, last_query) = {
+    let (sql_content, result, error, is_loading, is_connected, last_query, ordering) = {
         let tm = tab_manager.read();
         let tab = tm.tab_by_id(tab_id);
         let sql = tab
@@ -67,7 +67,8 @@ pub fn SqlEditor(
         let is_loading = tab.map(|t| t.is_loading).unwrap_or(false);
         let last_query = tab
             .and_then(|t| t.result.as_ref().map(|r| r.query.clone()));
-        (sql, result, error, is_loading, backend.read().is_some(), last_query)
+        let ordering = tm.tab_column_ordering(tab_id);
+        (sql, result, error, is_loading, backend.read().is_some(), last_query, ordering)
     };
 
     let mut execute_query = move || {
@@ -137,6 +138,16 @@ pub fn SqlEditor(
 
     let run_query = move |_| {
         execute_query();
+    };
+
+    let sort_by_column = move |column_name: String| {
+        let updated = tab_manager
+            .write()
+            .cycle_order_by_column(tab_id, &column_name)
+            .is_some();
+        if updated {
+            execute_query();
+        }
     };
 
     let elapsed_ms = *loading_elapsed_ms.read();
@@ -217,7 +228,12 @@ pub fn SqlEditor(
                     }
                 }
             }
-            ResultsPanel { result, error }
+            ResultsPanel {
+                result,
+                error,
+                on_sort_column: sort_by_column,
+                ordering,
+            }
         }
     }
 }

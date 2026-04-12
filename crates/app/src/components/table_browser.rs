@@ -180,7 +180,7 @@ pub fn TableBrowser(
         }
     });
 
-    let (generated_sql, result, error, is_loading, total_count) = {
+    let (generated_sql, result, error, is_loading, total_count, ordering) = {
         let tm = tab_manager.read();
         let tab = tm.tab_by_id(tab_id);
         let sql = tab
@@ -196,7 +196,8 @@ pub fn TableBrowser(
         let error = tab.and_then(|t| t.error.clone());
         let is_loading = tab.map(|t| t.is_loading).unwrap_or(false);
         let total_count = tab.and_then(|t| t.total_count);
-        (sql, result, error, is_loading, total_count)
+        let ordering = tm.tab_column_ordering(tab_id);
+        (sql, result, error, is_loading, total_count, ordering)
     };
 
     let row_count = result.as_ref().map(|r| r.rows.len()).unwrap_or(0);
@@ -204,6 +205,16 @@ pub fn TableBrowser(
 
     let refresh = move |_| {
         tab_manager.write().reset_for_refresh(tab_id);
+    };
+
+    let sort_by_column = move |column_name: String| {
+        let updated = tab_manager
+            .write()
+            .cycle_order_by_column(tab_id, &column_name)
+            .is_some();
+        if updated {
+            tab_manager.write().reset_for_refresh(tab_id);
+        }
     };
 
     let load_more = move |_| {
@@ -287,7 +298,13 @@ pub fn TableBrowser(
                     "{slow_warning_message()}"
                 }
             }
-            ResultsPanel { result, error, total_count, on_refresh: refresh,
+            ResultsPanel {
+                result,
+                error,
+                total_count,
+                on_refresh: refresh,
+                on_sort_column: sort_by_column,
+                ordering,
                 if has_more && !is_loading {
                     div { class: Styles::load_more_bar,
                         button {
