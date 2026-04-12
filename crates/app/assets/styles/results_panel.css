@@ -49,6 +49,21 @@
     white-space: nowrap;
 }
 
+.sortable-header {
+    cursor: pointer;
+    user-select: none;
+}
+
+.sortable-header:hover {
+    background: var(--bg-secondary);
+}
+
+.sort-indicator {
+    margin-left: 2px;
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
 .result-table td {
     padding: 4px 12px;
     border-bottom: 1px solid var(--border);
