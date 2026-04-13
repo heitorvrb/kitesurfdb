@@ -20,8 +20,7 @@ pub fn TabContainer(
 ) -> Element {
     let active_info = {
         let tm = tab_manager.read();
-        tm.active_tab()
-            .map(|t| (t.id, t.tab_type.clone()))
+        tm.active_tab().map(|t| (t.id, t.tab_type.clone()))
     };
 
     rsx! {

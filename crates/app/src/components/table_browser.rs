@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use app_core::tab_manager::{TabManager, TabType, PAGE_SIZE};
+use app_core::tab_manager::{PAGE_SIZE, TabManager, TabType};
 use db::traits::DbBackend;
 use db::types::{DbValue, SchemaInfo};
 use dioxus::prelude::*;
@@ -10,11 +10,7 @@ use uuid::Uuid;
 use super::results_panel::ResultsPanel;
 use super::sql_display::SqlDisplay;
 use crate::operation_feedback::{
-    OP_TIMEOUT,
-    SLOW_WARNING_MS,
-    remaining_timeout,
-    slow_warning_message,
-    timeout_error_message,
+    OP_TIMEOUT, SLOW_WARNING_MS, remaining_timeout, slow_warning_message, timeout_error_message,
 };
 
 #[css_module("/assets/styles/table_browser.css")]
@@ -57,7 +53,12 @@ pub fn TableBrowser(
         let has_result = {
             let tm = tab_manager.read();
             tm.tab_by_id(tab_id)
-                .map(|t| t.result.is_some() || t.is_loading || t.total_count.is_some() || t.error.is_some())
+                .map(|t| {
+                    t.result.is_some()
+                        || t.is_loading
+                        || t.total_count.is_some()
+                        || t.error.is_some()
+                })
                 .unwrap_or(true)
         };
 
@@ -66,7 +67,12 @@ pub fn TableBrowser(
                 let tm = tab_manager.read();
                 tm.tab_by_id(tab_id)
                     .and_then(|t| {
-                        if let TabType::TableBrowser { generated_sql, count_sql, .. } = &t.tab_type {
+                        if let TabType::TableBrowser {
+                            generated_sql,
+                            count_sql,
+                            ..
+                        } = &t.tab_type
+                        {
                             Some((generated_sql.clone(), count_sql.clone()))
                         } else {
                             None
@@ -77,8 +83,7 @@ pub fn TableBrowser(
 
             let token = {
                 let tm = tab_manager.read();
-                tm.tab_by_id(tab_id)
-                    .map(|t| t.cancellation_token.clone())
+                tm.tab_by_id(tab_id).map(|t| t.cancellation_token.clone())
             };
 
             if let (Some(sql), Some(token)) = (sql, token) {
@@ -113,12 +118,21 @@ pub fn TableBrowser(
                                     return;
                                 }
                                 Ok(Ok(r)) => {
-                                    let n = r.rows.first()
+                                    let n = r
+                                        .rows
+                                        .first()
                                         .and_then(|row| row.first())
-                                        .and_then(|v| if let DbValue::Int(n) = v { Some(*n as u64) } else { None })
+                                        .and_then(|v| {
+                                            if let DbValue::Int(n) = v {
+                                                Some(*n as u64)
+                                            } else {
+                                                None
+                                            }
+                                        })
                                         .unwrap_or(0);
                                     if n > 0 {
-                                        if let Some(tab) = tab_manager.write().tab_by_id_mut(tab_id) {
+                                        if let Some(tab) = tab_manager.write().tab_by_id_mut(tab_id)
+                                        {
                                             tab.total_count = Some(n);
                                         }
                                     }
@@ -238,8 +252,7 @@ pub fn TableBrowser(
 
         let token = {
             let tm = tab_manager.read();
-            tm.tab_by_id(tab_id)
-                .map(|t| t.cancellation_token.clone())
+            tm.tab_by_id(tab_id).map(|t| t.cancellation_token.clone())
         };
 
         if let (Some(sql), Some(token)) = (sql, token) {

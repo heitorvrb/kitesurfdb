@@ -336,9 +336,7 @@ mod tests {
             .await
             .unwrap();
         backend
-            .execute_query(
-                "CREATE TRIGGER trg_users AFTER INSERT ON users BEGIN SELECT 1; END",
-            )
+            .execute_query("CREATE TRIGGER trg_users AFTER INSERT ON users BEGIN SELECT 1; END")
             .await
             .unwrap();
 

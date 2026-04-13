@@ -78,7 +78,9 @@ pub fn ConnectionDialog(
             let mut config = match bt {
                 BackendType::Sqlite => ConnectionConfig::new_sqlite(&name, &path_val),
                 BackendType::Postgres => {
-                    let mut c = ConnectionConfig::new_postgres(&name, &host_val, port_val, &db_val, &user_val);
+                    let mut c = ConnectionConfig::new_postgres(
+                        &name, &host_val, port_val, &db_val, &user_val,
+                    );
                     c.default_schema = if default_schema_val.trim().is_empty() {
                         None
                     } else {

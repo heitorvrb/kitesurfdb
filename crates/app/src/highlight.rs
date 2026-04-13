@@ -8,7 +8,9 @@ pub fn highlight_sql(sql: &str, theme: Theme) -> String {
     let ss = SyntaxSet::load_defaults_newlines();
     let ts = ThemeSet::load_defaults();
 
-    let syntax = ss.find_syntax_by_extension("sql").unwrap_or_else(|| ss.find_syntax_plain_text());
+    let syntax = ss
+        .find_syntax_by_extension("sql")
+        .unwrap_or_else(|| ss.find_syntax_plain_text());
 
     let theme_name = match theme {
         Theme::Dark => "base16-ocean.dark",

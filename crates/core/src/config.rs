@@ -170,7 +170,10 @@ mod tests {
 
     #[test]
     fn test_preferences_serialization() {
-        let prefs = Preferences { theme: Theme::Light, sidebar_visible: false };
+        let prefs = Preferences {
+            theme: Theme::Light,
+            sidebar_visible: false,
+        };
         let json = serde_json::to_string(&prefs).unwrap();
         let loaded: Preferences = serde_json::from_str(&json).unwrap();
         assert_eq!(loaded.theme, Theme::Light);

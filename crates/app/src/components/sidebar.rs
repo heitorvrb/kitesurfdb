@@ -2,12 +2,14 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use crate::operation_feedback::{
+    OP_TIMEOUT, SLOW_WARNING_MS, slow_warning_message, timeout_error_message,
+};
 use app_core::connection_manager::ConnectionManager;
 use app_core::tab_manager::TabManager;
 use db::traits::DbBackend;
 use db::types::{DbObject, ObjectType, SchemaInfo};
 use dioxus::prelude::*;
-use crate::operation_feedback::{OP_TIMEOUT, SLOW_WARNING_MS, slow_warning_message, timeout_error_message};
 
 #[css_module("/assets/styles/sidebar.css")]
 struct Styles;
@@ -29,12 +31,13 @@ fn group_by_schema(info: &SchemaInfo) -> Vec<(String, SchemaObjects)> {
 
     // Pre-seed with all known schema names so empty schemas appear.
     for schema_name in &info.schemas {
-        map.entry(schema_name.clone()).or_insert_with(|| SchemaObjects {
-            tables: Vec::new(),
-            views: Vec::new(),
-            triggers: Vec::new(),
-            functions: Vec::new(),
-        });
+        map.entry(schema_name.clone())
+            .or_insert_with(|| SchemaObjects {
+                tables: Vec::new(),
+                views: Vec::new(),
+                triggers: Vec::new(),
+                functions: Vec::new(),
+            });
     }
 
     let all_objects = info
