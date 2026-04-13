@@ -232,11 +232,7 @@ pub fn sort_column_key(expr: &str) -> Option<String> {
 
     let last = trimmed.rsplit('.').next().unwrap_or(trimmed);
     let key = normalize_identifier(last);
-    if key.is_empty() {
-        None
-    } else {
-        Some(key)
-    }
+    if key.is_empty() { None } else { Some(key) }
 }
 
 fn parse_order_item(item: &str) -> Option<(String, SortDirection)> {
@@ -402,10 +398,16 @@ mod tests {
     #[test]
     fn test_cycle_order_by_adds_updates_and_removes() {
         let sql1 = cycle_order_by("SELECT * FROM \"users\" LIMIT 100", "name");
-        assert_eq!(sql1, "SELECT * FROM \"users\" ORDER BY \"name\" ASC LIMIT 100");
+        assert_eq!(
+            sql1,
+            "SELECT * FROM \"users\" ORDER BY \"name\" ASC LIMIT 100"
+        );
 
         let sql2 = cycle_order_by(&sql1, "name");
-        assert_eq!(sql2, "SELECT * FROM \"users\" ORDER BY \"name\" DESC LIMIT 100");
+        assert_eq!(
+            sql2,
+            "SELECT * FROM \"users\" ORDER BY \"name\" DESC LIMIT 100"
+        );
 
         let sql3 = cycle_order_by(&sql2, "name");
         assert_eq!(sql3, "SELECT * FROM \"users\" LIMIT 100");
@@ -429,7 +431,8 @@ mod tests {
 
     #[test]
     fn test_parse_order_items_reads_multiple_entries() {
-        let items = parse_order_items("SELECT * FROM users ORDER BY \"id\" DESC, name ASC LIMIT 10");
+        let items =
+            parse_order_items("SELECT * FROM users ORDER BY \"id\" DESC, name ASC LIMIT 10");
         assert_eq!(
             items,
             vec![

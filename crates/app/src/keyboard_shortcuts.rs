@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
+use crate::operation_feedback::{OP_TIMEOUT, timeout_error_message};
 use app_core::tab_manager::{TabManager, TabType};
 use db::traits::DbBackend;
 use db::types::SchemaInfo;
 use dioxus::prelude::*;
-use crate::operation_feedback::{OP_TIMEOUT, timeout_error_message};
 
 /// Registers global keyboard shortcut handlers for the application.
 ///
@@ -78,7 +78,10 @@ fn on_close_tab(mut tab_manager: Signal<TabManager>) {
     }
 }
 
-fn on_new_editor_tab(mut tab_manager: Signal<TabManager>, backend: Signal<Option<Arc<dyn DbBackend>>>) {
+fn on_new_editor_tab(
+    mut tab_manager: Signal<TabManager>,
+    backend: Signal<Option<Arc<dyn DbBackend>>>,
+) {
     if backend.read().is_some() {
         tab_manager.write().open_sql_editor();
     }

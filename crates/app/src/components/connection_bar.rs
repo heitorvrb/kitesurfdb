@@ -56,9 +56,8 @@ pub fn ConnectionBar(
 
     let active_name = {
         let cm = connection_manager.read();
-        cm.active_connection_id().and_then(|id| {
-            cm.connection_by_id(id).map(|c| c.name.clone())
-        })
+        cm.active_connection_id()
+            .and_then(|id| cm.connection_by_id(id).map(|c| c.name.clone()))
     };
 
     let is_dark = *theme.read() == Theme::Dark;

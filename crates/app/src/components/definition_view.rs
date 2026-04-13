@@ -1,12 +1,14 @@
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use crate::operation_feedback::{
+    OP_TIMEOUT, SLOW_WARNING_MS, slow_warning_message, timeout_error_message,
+};
 use app_core::tab_manager::{TabManager, TabType};
 use db::traits::DbBackend;
 use db::types::ObjectType;
 use dioxus::prelude::*;
 use uuid::Uuid;
-use crate::operation_feedback::{OP_TIMEOUT, SLOW_WARNING_MS, slow_warning_message, timeout_error_message};
 
 #[css_module("/assets/styles/definition_view.css")]
 struct Styles;
@@ -82,8 +84,7 @@ pub fn DefinitionView(
 
             let token = {
                 let tm = tab_manager.read();
-                tm.tab_by_id(tab_id)
-                    .map(|t| t.cancellation_token.clone())
+                tm.tab_by_id(tab_id).map(|t| t.cancellation_token.clone())
             };
 
             if let Some(token) = token {

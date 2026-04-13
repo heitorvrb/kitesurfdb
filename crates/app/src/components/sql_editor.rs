@@ -5,14 +5,16 @@ use app_core::config::Theme;
 use app_core::tab_manager::{TabManager, TabType};
 use db::traits::DbBackend;
 use db::types::SchemaInfo;
-use dioxus::prelude::*;
 use dioxus::prelude::Key;
+use dioxus::prelude::*;
 use uuid::Uuid;
 
 use super::results_panel::ResultsPanel;
 use super::sql_display::SqlDisplay;
 use crate::highlight::highlight_sql;
-use crate::operation_feedback::{OP_TIMEOUT, SLOW_WARNING_MS, slow_warning_message, timeout_error_message};
+use crate::operation_feedback::{
+    OP_TIMEOUT, SLOW_WARNING_MS, slow_warning_message, timeout_error_message,
+};
 
 #[css_module("/assets/styles/sql_editor.css")]
 struct Styles;
@@ -65,10 +67,17 @@ pub fn SqlEditor(
         let result = tab.and_then(|t| t.result.clone());
         let error = tab.and_then(|t| t.error.clone());
         let is_loading = tab.map(|t| t.is_loading).unwrap_or(false);
-        let last_query = tab
-            .and_then(|t| t.result.as_ref().map(|r| r.query.clone()));
+        let last_query = tab.and_then(|t| t.result.as_ref().map(|r| r.query.clone()));
         let ordering = tm.tab_column_ordering(tab_id);
-        (sql, result, error, is_loading, backend.read().is_some(), last_query, ordering)
+        (
+            sql,
+            result,
+            error,
+            is_loading,
+            backend.read().is_some(),
+            last_query,
+            ordering,
+        )
     };
 
     let mut execute_query = move || {
@@ -85,8 +94,7 @@ pub fn SqlEditor(
 
         let token = {
             let tm = tab_manager.read();
-            tm.tab_by_id(tab_id)
-                .map(|t| t.cancellation_token.clone())
+            tm.tab_by_id(tab_id).map(|t| t.cancellation_token.clone())
         };
 
         if let (Some(sql), Some(token)) = (sql, token) {
