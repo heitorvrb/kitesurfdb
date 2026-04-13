@@ -58,7 +58,7 @@ pub fn ResultsPanel(
                                         let column_key = normalize_column_key(&col.name);
                                         let sort_info = ordering.iter().find(|o| o.column_key == column_key);
                                         let arrow = sort_info.map(|info| {
-                                            if info.direction == SortDirection::Asc { "↑" } else { "↓" }
+                                            if info.direction == SortDirection::Asc { "▲" } else { "▼" }
                                         });
                                         let show_precedence = ordering.len() > 1;
                                         rsx! {
