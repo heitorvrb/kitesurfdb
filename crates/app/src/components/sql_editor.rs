@@ -31,6 +31,27 @@ pub fn SqlEditor(
     let mut schema_info = schema_info;
     let mut loading_started_at: Signal<Option<Instant>> = use_signal(|| None);
     let mut loading_elapsed_ms: Signal<u128> = use_signal(|| 0);
+    let mut did_focus_editor = use_signal(|| false);
+    let editor_id = format!("sql-editor-{tab_id}");
+    let focus_editor_id = editor_id.clone();
+
+    use_effect(move || {
+        if *did_focus_editor.read() {
+            return;
+        }
+
+        document::eval(&format!(
+            r#"
+            requestAnimationFrame(() => {{
+                const el = document.getElementById('{focus_editor_id}');
+                if (el) {{
+                    el.focus();
+                }}
+            }});
+            "#
+        ));
+        did_focus_editor.set(true);
+    });
 
     use_future(move || async move {
         loop {
@@ -202,6 +223,7 @@ pub fn SqlEditor(
                             dangerous_inner_html: highlighted,
                         }
                         textarea {
+                            id: "{editor_id}",
                             class: Styles::sql_editor,
                             value: "{sql_content}",
                             placeholder: "Enter SQL query...",
