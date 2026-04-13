@@ -180,7 +180,8 @@ User action (Run button / Ctrl+Enter / click table in sidebar)
 
 
 - [x] Search funcionality, open a modal to type something and find any database object (table, function, view, trigger) with that name. Acessible via a Search option in the top system menu or via shortcut Ctrl+F.
-- [ ] Ordering on any tab, editor, table or view. Clicking on the column header cycles between adding it to the sql as order asc, order desc, or removing it from the order portion of the sql.
+- [x] Ordering on any tab, editor, table or view. Clicking on the column header cycles between adding it to the sql as order asc, order desc, or removing it from the order portion of the sql.
+- [ ] Opening an SQL Editor tab should focus in the textarea as soon as it is opened.
 
 ### Phase 7 - Edit inline
 - [ ] When I click on a cell of a results tab, be it in the sql editor or a table, it should open an input in place for editing. If the user edits the value and hits enter, it should show as an edited cell by a different color. If any cell is edited, at the bottom a "Save" button should appear. When clicked, it should pick any lines where a cell was edited and do an SQL UPDATE statement for each of those lines.
