@@ -186,6 +186,8 @@ User action (Run button / Ctrl+Enter / click table in sidebar)
 - [ ] Add github as Project Website in Gnome Software Store
 - [ ] Fix colors in Search dialog
 
+- [ ] There should be a way to see the view's source query.
+
 ### Phase 7 - Edit inline
 - [ ] When I click on a cell of a results tab, be it in the sql editor or a table, it should open an input in place for editing. If the user edits the value and hits enter, it should show as an edited cell by a different color. If any cell is edited, at the bottom a "Save" button should appear. When clicked, it should pick any lines where a cell was edited and do an SQL UPDATE statement for each of those lines.
 
