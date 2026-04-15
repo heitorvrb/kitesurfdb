@@ -182,10 +182,12 @@ User action (Run button / Ctrl+Enter / click table in sidebar)
 - [x] Search funcionality, open a modal to type something and find any database object (table, function, view, trigger) with that name. Acessible via a Search option in the top system menu or via shortcut Ctrl+F.
 - [x] Ordering on any tab, editor, table or view. Clicking on the column header cycles between adding it to the sql as order asc, order desc, or removing it from the order portion of the sql.
 - [x] Opening an SQL Editor tab should focus in the textarea as soon as it is opened.
+
+- [x] Remove top application menu (Window, Edit) - not used
+
 - [ ] deb page in Gnome Software Store says: Version 0.1.3, No details for this release.
 - [ ] Add github as Project Website in Gnome Software Store
 
-- [ ] Remove top application menu (Window, Edit) - not used
 - [ ] Fix colors in Search dialog
 - [ ] j and k move up and down in the search results list
 
