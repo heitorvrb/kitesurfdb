@@ -5,6 +5,7 @@ mod keyboard_shortcuts;
 mod operation_feedback;
 
 use dioxus::desktop::tao::window::Theme;
+use dioxus::desktop::muda::Menu;
 use dioxus::desktop::{Config, WindowBuilder};
 use dioxus::prelude::*;
 
@@ -16,11 +17,13 @@ fn main() {
 
     LaunchBuilder::desktop()
         .with_cfg(
-            Config::new().with_window(
-                WindowBuilder::new()
-                    .with_title("Kitesurf")
-                    .with_theme(Some(theme)),
-            ),
+            Config::new()
+                .with_menu(None::<Menu>)
+                .with_window(
+                    WindowBuilder::new()
+                        .with_title("Kitesurf")
+                        .with_theme(Some(theme)),
+                ),
         )
         .launch(app::App);
 }
