@@ -185,6 +185,7 @@ User action (Run button / Ctrl+Enter / click table in sidebar)
 - [ ] deb page in Gnome Software Store says: Version 0.1.3, No details for this release.
 - [ ] Add github as Project Website in Gnome Software Store
 
+- [ ] Remove top application menu (Window, Edit) - not used
 - [ ] Fix colors in Search dialog
 - [ ] j and k move up and down in the search results list
 
