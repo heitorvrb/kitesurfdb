@@ -185,11 +185,12 @@ User action (Run button / Ctrl+Enter / click table in sidebar)
 
 - [x] Remove top application menu (Window, Edit) - not used
 
-- [ ] deb page in Gnome Software Store says: Version 0.1.3, No details for this release.
-- [ ] Add github as Project Website in Gnome Software Store
-
 - [ ] Fix colors in Search dialog
 - [ ] j and k move up and down in the search results list
+- [ ] it shouldn't allow me to open the Search functionality (ctrl+f) without connecting to a database first
+
+- [ ] deb page in Gnome Software Store says: Version 0.1.3, No details for this release.
+- [ ] Add github as Project Website in Gnome Software Store
 
 - [ ] There should be a way to see the view's source query.
 - [ ] When the result is few items and the table as a lot of columns, the horizontal scroll is in the way of clicking on the last record. Make the horizontal scroll be on the bottom of the screen always.
