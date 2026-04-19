@@ -188,8 +188,8 @@ User action (Run button / Ctrl+Enter / click table in sidebar)
 - [x] it shouldn't allow me to open the Search functionality (ctrl+f) without connecting to a database first
 - [x] When the result is few items and the table as a lot of columns, the horizontal scroll is in the way of clicking on the last record. Make the horizontal scroll be on the bottom of the screen always.
 
-- [ ] deb page in Gnome Software Store says: Version 0.1.3, No details for this release.
-- [ ] Add github as Project Website in Gnome Software Store
+- [x] deb page in Gnome Software Store says: Version 0.1.3, No details for this release.
+- [x] Add github as Project Website in Gnome Software Store
 
 - [ ] There should be a way to see the view's source query.
 

@@ -40,6 +40,8 @@ override_dh_auto_install:
 	cp -a $(DX_ASSETS)/*.css debian/kitesurfdb/$(ASSET_DEST)/
 	install -D -m 0644 debian/kitesurfdb.desktop \
 		debian/kitesurfdb/usr/share/applications/kitesurfdb.desktop
+	install -D -m 0644 debian/com.heitorvrb.kitesurfdb.metainfo.xml \
+		debian/kitesurfdb/usr/share/metainfo/com.heitorvrb.kitesurfdb.metainfo.xml
 	install -D -m 0644 crates/app/assets/icon.png \
 		debian/kitesurfdb/usr/share/pixmaps/kitesurfdb.png
 
