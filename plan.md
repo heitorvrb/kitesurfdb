@@ -185,9 +185,7 @@ User action (Run button / Ctrl+Enter / click table in sidebar)
 
 - [x] Remove top application menu (Window, Edit) - not used
 
-- [ ] Fix colors in Search dialog
-- [ ] j and k move up and down in the search results list
-- [ ] it shouldn't allow me to open the Search functionality (ctrl+f) without connecting to a database first
+- [x] it shouldn't allow me to open the Search functionality (ctrl+f) without connecting to a database first
 
 - [ ] deb page in Gnome Software Store says: Version 0.1.3, No details for this release.
 - [ ] Add github as Project Website in Gnome Software Store
@@ -196,6 +194,9 @@ User action (Run button / Ctrl+Enter / click table in sidebar)
 - [ ] When the result is few items and the table as a lot of columns, the horizontal scroll is in the way of clicking on the last record. Make the horizontal scroll be on the bottom of the screen always.
 
 - [ ] Feature: Inline where - when on table or view mode, under the query being executed, there should be an input field always available where the user can type a filter, and that filter is automatically added to the WHERE of the query.
+
+- [ ] Fix colors in Search dialog
+- [ ] j and k move up and down in the search results list
 
 ### Phase 7 - Edit inline
 - [ ] When I click on a cell of a results tab, be it in the sql editor or a table, it should open an input in place for editing. If the user edits the value and hits enter, it should show as an edited cell by a different color. If any cell is edited, at the bottom a "Save" button should appear. When clicked, it should pick any lines where a cell was edited and do an SQL UPDATE statement for each of those lines.

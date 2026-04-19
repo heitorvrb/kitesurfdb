@@ -60,7 +60,7 @@ pub fn use_keyboard_shortcuts(
                 Ok(key) if key == "NEW_EDITOR_TAB" => on_new_editor_tab(tab_manager, backend),
                 Ok(key) if key == "NEXT_TAB" => on_next_tab(tab_manager),
                 Ok(key) if key == "PREV_TAB" => on_prev_tab(tab_manager),
-                Ok(key) if key == "OPEN_SEARCH" => on_open_search(show_search_modal),
+                Ok(key) if key == "OPEN_SEARCH" => on_open_search(show_search_modal, backend),
                 _ => break,
             }
         }
@@ -95,8 +95,13 @@ fn on_prev_tab(mut tab_manager: Signal<TabManager>) {
     tab_manager.write().activate_previous_tab();
 }
 
-fn on_open_search(mut show_search_modal: Signal<bool>) {
-    show_search_modal.set(true);
+fn on_open_search(
+    mut show_search_modal: Signal<bool>,
+    backend: Signal<Option<Arc<dyn DbBackend>>>,
+) {
+    if backend.read().is_some() {
+        show_search_modal.set(true);
+    }
 }
 
 async fn on_f5(
