@@ -25,6 +25,8 @@ kitesurfdb (X.Y.Z) trixie; urgency=low
 
 The date must be RFC 2822 format. Generate it with `date -R`.
 
+3. `debian/com.heitorvrb.kitesurfdb.metainfo.xml`  — add a new \<release\> entry
+
 ## Build
 
 ```bash

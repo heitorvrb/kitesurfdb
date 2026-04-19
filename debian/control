@@ -2,6 +2,7 @@ Source: kitesurfdb
 Section: database
 Priority: optional
 Maintainer: Heitor Rodrigues <heitor.vrb@gmail.com>
+Homepage: https://github.com/heitorvrb/kitesurfdb
 Build-Depends: debhelper-compat (= 13),
                libwebkit2gtk-4.1-dev,
                libjavascriptcoregtk-4.1-dev,

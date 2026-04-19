@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.heitorvrb.kitesurfdb</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>LicenseRef-proprietary</project_license>
+
+  <name>Kitesurf</name>
+  <summary>Desktop database client for SQLite and PostgreSQL</summary>
+
+  <description>
+    <p>
+      Kitesurf is a cross-platform desktop database client written in Rust using
+      Dioxus. It supports SQLite and PostgreSQL with a tabbed interface, an SQL
+      editor with syntax highlighting, a table browser, and schema introspection.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>Saved connections with OS keyring password storage</li>
+      <li>Light and dark themes</li>
+      <li>Click-to-sort columns and inline ORDER BY editing</li>
+      <li>Low resource usage</li>
+    </ul>
+  </description>
+
+  <launchable type="desktop-id">kitesurfdb.desktop</launchable>
+
+  <url type="homepage">https://github.com/heitorvrb/kitesurfdb</url>
+  <url type="bugtracker">https://github.com/heitorvrb/kitesurfdb/issues</url>
+  <url type="vcs-browser">https://github.com/heitorvrb/kitesurfdb</url>
+
+  <developer id="com.heitorvrb">
+    <name>Heitor Rodrigues</name>
+  </developer>
+
+  <content_rating type="oars-1.1" />
+
+  <categories>
+    <category>Database</category>
+    <category>Development</category>
+    <category>Utility</category>
+  </categories>
+
+  <keywords>
+    <keyword>database</keyword>
+    <keyword>sql</keyword>
+    <keyword>sqlite</keyword>
+    <keyword>postgres</keyword>
+    <keyword>query</keyword>
+  </keywords>
+
+  <screenshots>
+    <screenshot type="default">
+      <caption>Main window</caption>
+      <image type="source">https://raw.githubusercontent.com/heitorvrb/kitesurfdb/main/debian/screenshots/screenshot1.png</image>
+    </screenshot>
+  </screenshots>
+
+  <releases>
+    <release version="0.1.4" date="2026-04-19">
+      <description>
+        <ul>
+          <li>Open search only when connected to a database.</li>
+          <li>Fix Results Panel CSS horizontal scroll</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.1.3" date="2026-04-12">
+      <description>
+        <ul>
+          <li>Click a column header to cycle ORDER BY ASC / DESC / none.</li>
+          <li>Focus the textarea when creating or switching to an SQL editor tab.</li>
+          <li>Search modal (Ctrl+F) to find any database object by name.</li>
+          <li>Ctrl+Tab / Ctrl+Shift+Tab cycles between open tabs.</li>
+          <li>Ctrl+W closes a tab; Ctrl+N opens a new editor tab.</li>
+          <li>F5 refreshes results on any tab and runs the query in an editor.</li>
+          <li>Fix: no longer panics when disconnecting mid-refresh on a dead Postgres connection.</li>
+          <li>Fix: horizontal scrollbar no longer blocks clicking the last row when results are short.</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.1.2" date="2026-04-12">
+      <description>
+        <p>Initial Debian packaging.</p>
+      </description>
+    </release>
+  </releases>
+</component>
