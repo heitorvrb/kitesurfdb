@@ -7,7 +7,7 @@ A Database Client
 * Tab system
 * SQL Editor with syntax highlighting
 
-# Technologis
+# Technologies
 * Rust
 * Dioxus
 
