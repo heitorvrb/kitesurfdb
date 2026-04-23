@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::operation_feedback::{OP_TIMEOUT, timeout_error_message};
 use app_core::tab_manager::{TabManager, TabType};
 use db::traits::DbBackend;
-use db::types::SchemaInfo;
+use db::types::{ObjectType, SchemaInfo};
 use dioxus::prelude::*;
 
 /// Registers global keyboard shortcut handlers for the application.
@@ -48,6 +48,11 @@ pub fn use_keyboard_shortcuts(
                     e.preventDefault();
                     dioxus.send('OPEN_SEARCH');
                 }
+
+                if (e.key === 'F12') {
+                    e.preventDefault();
+                    dioxus.send('VIEW_SOURCE');
+                }
             });
             await new Promise(() => {});
             "#,
@@ -61,6 +66,7 @@ pub fn use_keyboard_shortcuts(
                 Ok(key) if key == "NEXT_TAB" => on_next_tab(tab_manager),
                 Ok(key) if key == "PREV_TAB" => on_prev_tab(tab_manager),
                 Ok(key) if key == "OPEN_SEARCH" => on_open_search(show_search_modal, backend),
+                Ok(key) if key == "VIEW_SOURCE" => on_view_source(tab_manager),
                 _ => break,
             }
         }
@@ -101,6 +107,28 @@ fn on_open_search(
 ) {
     if backend.read().is_some() {
         show_search_modal.set(true);
+    }
+}
+
+fn on_view_source(mut tab_manager: Signal<TabManager>) {
+    let active = {
+        let tm = tab_manager.read();
+        tm.active_tab().map(|t| (t.id, t.tab_type.clone()))
+    };
+
+    if let Some((_id, TabType::TableBrowser { object_name, object_type, .. })) = active {
+        if object_type == ObjectType::View {
+            let (schema, name) = split_qualified_name(&object_name);
+            tab_manager.write().open_view_source(name, schema);
+        }
+    }
+}
+
+fn split_qualified_name(object_name: &str) -> (Option<String>, String) {
+    if let Some((schema, name)) = object_name.rsplit_once('.') {
+        (Some(schema.to_string()), name.to_string())
+    } else {
+        (None, object_name.to_string())
     }
 }
 
