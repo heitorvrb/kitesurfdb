@@ -53,7 +53,7 @@ pub fn SearchModal(
     };
 
     let results_for_submit = results.clone();
-    let results_for_double = results.clone();
+    let results_for_keys = results.clone();
 
     let results_for_effect = results.clone();
     use_effect(move || {
@@ -68,6 +68,21 @@ pub fn SearchModal(
                 selected_key.set(String::new());
             }
         }
+    });
+
+    let selected_key_value = selected_key.read().clone();
+    use_effect(move || {
+        selected_key.read();
+        document::eval(
+            r#"
+            requestAnimationFrame(() => {
+                const selected = document.querySelector('#object-search-results [aria-selected="true"]');
+                if (selected) {
+                    selected.scrollIntoView({ block: 'nearest' });
+                }
+            });
+            "#,
+        );
     });
 
     rsx! {
@@ -124,21 +139,57 @@ pub fn SearchModal(
                                 show_search_modal.set(false);
                             }
                         },
-                        select {
+                        div {
                             id: "object-search-results",
                             class: Styles::results_list,
-                            size: "12",
-                            value: "{selected_key}",
-                            onchange: move |evt| selected_key.set(evt.value()),
-                            ondoubleclick: move |_| {
-                                if let Some(selected) = selected_result(&results_for_double, selected_key.read().as_str()) {
-                                    open_object(&mut tab_manager.write(), selected);
-                                    show_search_modal.set(false);
+                            role: "listbox",
+                            tabindex: "0",
+                            onkeydown: move |evt: KeyboardEvent| {
+                                let key = evt.key();
+                                if key == Key::ArrowDown || key == Key::ArrowUp {
+                                    evt.prevent_default();
+                                    let current = selected_key.read().clone();
+                                    let current_index = selected_result_index(&results_for_keys, &current).unwrap_or(0);
+                                    let next_index = if key == Key::ArrowDown {
+                                        (current_index + 1).min(results_for_keys.len().saturating_sub(1))
+                                    } else {
+                                        current_index.saturating_sub(1)
+                                    };
+                                    if let Some(next) = results_for_keys.get(next_index) {
+                                        selected_key.set(object_key(next));
+                                    }
+                                } else if key == Key::Enter {
+                                    evt.prevent_default();
+                                    let current = selected_key.read().clone();
+                                    if let Some(selected) = selected_result(&results_for_keys, current.as_str()) {
+                                        open_object(&mut tab_manager.write(), selected);
+                                        show_search_modal.set(false);
+                                    }
                                 }
                             },
                             for obj in &results {
-                                option {
-                                    value: "{object_key(obj)}",
+                                button {
+                                    key: "{object_key(obj)}",
+                                    class: if object_key(obj) == selected_key_value.as_str() {
+                                        format!("{} {}", Styles::result_item, Styles::result_item_selected)
+                                    } else {
+                                        Styles::result_item.to_string()
+                                    },
+                                    r#type: "button",
+                                    role: "option",
+                                    aria_selected: "{object_key(obj) == selected_key_value.as_str()}",
+                                    tabindex: "-1",
+                                    onclick: {
+                                        let key = object_key(obj);
+                                        move |_| selected_key.set(key.clone())
+                                    },
+                                    ondoubleclick: {
+                                        let obj = obj.clone();
+                                        move |_| {
+                                            open_object(&mut tab_manager.write(), &obj);
+                                            show_search_modal.set(false);
+                                        }
+                                    },
                                     "{qualified_name(obj)} [{object_type_label(&obj.object_type)}]"
                                 }
                             }
@@ -211,6 +262,10 @@ fn matches_pattern(candidate: &str, pattern: &str) -> bool {
 
 fn selected_result<'a>(results: &'a [DbObject], key: &str) -> Option<&'a DbObject> {
     results.iter().find(|obj| object_key(obj) == key)
+}
+
+fn selected_result_index(results: &[DbObject], key: &str) -> Option<usize> {
+    results.iter().position(|obj| object_key(obj) == key)
 }
 
 fn object_key(obj: &DbObject) -> String {

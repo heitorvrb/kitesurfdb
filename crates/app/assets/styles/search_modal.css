@@ -88,11 +88,40 @@
     padding: 6px;
     font-family: inherit;
     font-size: 13px;
+    height: 206px;
     overflow-y: auto;
 }
 
-.results-list option {
-    padding: 6px 8px;
+.results-list:focus {
+    outline: 1px solid var(--accent);
+    outline-offset: 0;
+}
+
+.result-item {
+    width: 100%;
+    border: 0;
+    border-radius: 3px;
+    background: transparent;
+    color: var(--text-primary);
+    cursor: default;
+    display: block;
+    font: inherit;
+    line-height: 17px;
+    overflow: hidden;
+    padding: 0 8px;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.result-item:hover {
+    background: var(--bg-tertiary);
+}
+
+.result-item-selected,
+.result-item-selected:hover {
+    background: var(--accent);
+    color: var(--bg-primary);
 }
 
 .actions {
