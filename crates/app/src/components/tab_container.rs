@@ -44,7 +44,9 @@ pub fn TabContainer(
                     schema_info,
                 }
             },
-            Some((id, TabType::TriggerView { .. })) | Some((id, TabType::FunctionView { .. })) => rsx! {
+            Some((id, TabType::TriggerView { .. }))
+            | Some((id, TabType::FunctionView { .. }))
+            | Some((id, TabType::ViewSource { .. })) => rsx! {
                 DefinitionView {
                     key: "{id}",
                     tab_id: id,

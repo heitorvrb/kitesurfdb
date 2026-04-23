@@ -66,6 +66,15 @@ pub fn DefinitionView(
                     ObjectType::Function,
                     t.error.clone(),
                 )),
+                TabType::ViewSource {
+                    object_name,
+                    definition,
+                } => Some((
+                    object_name.clone(),
+                    definition.clone(),
+                    ObjectType::View,
+                    t.error.clone(),
+                )),
                 _ => None,
             })
         };
@@ -108,6 +117,9 @@ pub fn DefinitionView(
                                                     TabType::FunctionView { definition, .. } => {
                                                         *definition = Some(def);
                                                     }
+                                                    TabType::ViewSource { definition, .. } => {
+                                                        *definition = Some(def);
+                                                    }
                                                     _ => {}
                                                 }
                                                 tab.error = None;
@@ -148,6 +160,10 @@ pub fn DefinitionView(
                         object_name,
                         definition,
                     } => (object_name.clone(), definition.clone(), "Function"),
+                    TabType::ViewSource {
+                        object_name,
+                        definition,
+                    } => (object_name.clone(), definition.clone(), "View Source"),
                     _ => (String::new(), None, ""),
                 };
                 (name, def, t.error.clone(), t.is_loading, label)
