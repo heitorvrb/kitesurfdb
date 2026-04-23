@@ -73,22 +73,19 @@ pub fn SearchModal(
     let selected_key_value = selected_key.read().clone();
     use_effect(move || {
         selected_key.read();
-        document::eval(
-            r#"
-            requestAnimationFrame(() => {
-                const selected = document.querySelector('#object-search-results [aria-selected="true"]');
-                if (selected) {
-                    selected.scrollIntoView({ block: 'nearest' });
-                }
-            });
-            "#,
-        );
+        scroll_selected_result_into_view();
     });
 
     rsx! {
         div {
             class: Styles::overlay,
             onclick: move |_| show_search_modal.set(false),
+            onkeydown: move |evt: KeyboardEvent| {
+                if evt.key() == Key::Escape {
+                    evt.prevent_default();
+                    show_search_modal.set(false);
+                }
+            },
             div {
                 class: Styles::dialog,
                 onclick: move |evt| evt.stop_propagation(),
@@ -110,14 +107,11 @@ pub fn SearchModal(
                     onkeydown: move |evt: KeyboardEvent| {
                         if evt.key() == Key::Enter {
                             evt.prevent_default();
-                            if let Some(first) = results.first() {
-                                selected_key.set(object_key(first));
-                                document::eval(
-                                    r#"
-                                    const list = document.getElementById('object-search-results');
-                                    if (list) { list.focus(); }
-                                    "#,
-                                );
+                            let current = selected_key.read().clone();
+                            let selected = selected_result(&results, current.as_str()).or_else(|| results.first());
+                            if let Some(selected) = selected {
+                                open_object(&mut tab_manager.write(), selected);
+                                show_search_modal.set(false);
                             }
                         }
                     },
@@ -146,11 +140,19 @@ pub fn SearchModal(
                             tabindex: "0",
                             onkeydown: move |evt: KeyboardEvent| {
                                 let key = evt.key();
-                                if key == Key::ArrowDown || key == Key::ArrowUp {
+                                let direction = match key {
+                                    Key::ArrowDown => Some(1),
+                                    Key::ArrowUp => Some(-1),
+                                    Key::Character(ref value) if value == "j" => Some(1),
+                                    Key::Character(ref value) if value == "k" => Some(-1),
+                                    _ => None,
+                                };
+
+                                if let Some(direction) = direction {
                                     evt.prevent_default();
                                     let current = selected_key.read().clone();
                                     let current_index = selected_result_index(&results_for_keys, &current).unwrap_or(0);
-                                    let next_index = if key == Key::ArrowDown {
+                                    let next_index = if direction > 0 {
                                         (current_index + 1).min(results_for_keys.len().saturating_sub(1))
                                     } else {
                                         current_index.saturating_sub(1)
@@ -266,6 +268,19 @@ fn selected_result<'a>(results: &'a [DbObject], key: &str) -> Option<&'a DbObjec
 
 fn selected_result_index(results: &[DbObject], key: &str) -> Option<usize> {
     results.iter().position(|obj| object_key(obj) == key)
+}
+
+fn scroll_selected_result_into_view() {
+    document::eval(
+        r#"
+        requestAnimationFrame(() => {
+            const selected = document.querySelector('#object-search-results [aria-selected="true"]');
+            if (selected) {
+                selected.scrollIntoView({ block: 'nearest' });
+            }
+        });
+        "#,
+    );
 }
 
 fn object_key(obj: &DbObject) -> String {
