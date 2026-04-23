@@ -3,7 +3,7 @@ use std::time::{Duration, Instant};
 
 use app_core::tab_manager::{PAGE_SIZE, TabManager, TabType};
 use db::traits::DbBackend;
-use db::types::{DbValue, SchemaInfo};
+use db::types::{DbValue, ObjectType, SchemaInfo};
 use dioxus::prelude::*;
 use uuid::Uuid;
 
@@ -194,7 +194,7 @@ pub fn TableBrowser(
         }
     });
 
-    let (generated_sql, result, error, is_loading, total_count, ordering) = {
+    let (generated_sql, result, error, is_loading, total_count, ordering, view_source_target) = {
         let tm = tab_manager.read();
         let tab = tm.tab_by_id(tab_id);
         let sql = tab
@@ -211,7 +211,32 @@ pub fn TableBrowser(
         let is_loading = tab.map(|t| t.is_loading).unwrap_or(false);
         let total_count = tab.and_then(|t| t.total_count);
         let ordering = tm.tab_column_ordering(tab_id);
-        (sql, result, error, is_loading, total_count, ordering)
+        let view_source_target = tab.and_then(|t| {
+            if let TabType::TableBrowser {
+                object_name,
+                object_type,
+                ..
+            } = &t.tab_type
+            {
+                if object_type == &ObjectType::View {
+                    let (schema, name) = split_qualified_name(object_name);
+                    Some((name, schema))
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        });
+        (
+            sql,
+            result,
+            error,
+            is_loading,
+            total_count,
+            ordering,
+            view_source_target,
+        )
     };
 
     let row_count = result.as_ref().map(|r| r.rows.len()).unwrap_or(0);
@@ -302,7 +327,17 @@ pub fn TableBrowser(
 
     rsx! {
         div { class: Styles::table_browser,
-            SqlDisplay { sql: generated_sql }
+            if let Some((view_name, schema)) = view_source_target {
+                SqlDisplay {
+                    sql: generated_sql,
+                    action_label: "View Source".to_string(),
+                    on_action: move |_| {
+                        tab_manager.write().open_view_source(view_name.clone(), schema.clone());
+                    }
+                }
+            } else {
+                SqlDisplay { sql: generated_sql }
+            }
             if is_loading {
                 div { class: Styles::loading, "Loading object... {elapsed_secs:.1}s" }
             }
@@ -329,5 +364,13 @@ pub fn TableBrowser(
                 }
             }
         }
+    }
+}
+
+fn split_qualified_name(object_name: &str) -> (Option<String>, String) {
+    if let Some((schema, name)) = object_name.split_once('.') {
+        (Some(schema.to_string()), name.to_string())
+    } else {
+        (None, object_name.to_string())
     }
 }

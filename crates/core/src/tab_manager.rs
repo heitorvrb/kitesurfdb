@@ -1,4 +1,4 @@
-use db::types::QueryResult;
+use db::types::{ObjectType, QueryResult};
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
@@ -17,12 +17,17 @@ pub enum TabType {
         object_name: String,
         generated_sql: String,
         count_sql: String,
+        object_type: ObjectType,
     },
     TriggerView {
         object_name: String,
         definition: Option<String>,
     },
     FunctionView {
+        object_name: String,
+        definition: Option<String>,
+    },
+    ViewSource {
         object_name: String,
         definition: Option<String>,
     },
@@ -233,10 +238,46 @@ impl TabManager {
         )
     }
 
-    pub fn open_table_browser(&mut self, table_name: String, schema: Option<String>) -> Uuid {
+    pub fn open_view_source(&mut self, view_name: String, schema: Option<String>) -> Uuid {
         let qualified_name = match &schema {
-            Some(s) => format!("{s}.{table_name}"),
-            None => table_name.clone(),
+            Some(s) => format!("{s}.{view_name}"),
+            None => view_name.clone(),
+        };
+
+        if let Some(existing) = self.tabs.iter().find(|t| {
+            matches!(&t.tab_type, TabType::ViewSource { object_name, .. } if object_name == &qualified_name)
+        }) {
+            let id = existing.id;
+            self.active_tab_id = Some(id);
+            return id;
+        }
+
+        self.open_tab(
+            format!("{view_name} source"),
+            TabType::ViewSource {
+                object_name: qualified_name,
+                definition: None,
+            },
+        )
+    }
+
+    pub fn open_table_browser(&mut self, table_name: String, schema: Option<String>) -> Uuid {
+        self.open_object_browser(table_name, schema, ObjectType::Table)
+    }
+
+    pub fn open_view_browser(&mut self, view_name: String, schema: Option<String>) -> Uuid {
+        self.open_object_browser(view_name, schema, ObjectType::View)
+    }
+
+    fn open_object_browser(
+        &mut self,
+        object_name: String,
+        schema: Option<String>,
+        object_type: ObjectType,
+    ) -> Uuid {
+        let qualified_name = match &schema {
+            Some(s) => format!("{s}.{object_name}"),
+            None => object_name.clone(),
         };
 
         // If a tab for this table already exists, just activate it
@@ -249,17 +290,18 @@ impl TabManager {
         }
 
         let quoted = match &schema {
-            Some(s) => format!("\"{s}\".\"{table_name}\""),
-            None => format!("\"{table_name}\""),
+            Some(s) => format!("\"{s}\".\"{object_name}\""),
+            None => format!("\"{object_name}\""),
         };
         let sql = format!("SELECT * FROM {quoted} LIMIT {PAGE_SIZE}");
         let count_sql = format!("SELECT COUNT(*) FROM {quoted}");
         self.open_tab(
-            table_name,
+            object_name,
             TabType::TableBrowser {
                 object_name: qualified_name,
                 generated_sql: sql,
                 count_sql,
+                object_type,
             },
         )
     }
@@ -508,6 +550,7 @@ mod tests {
                 object_name: "users".into(),
                 generated_sql: "SELECT * FROM \"users\" LIMIT 100".into(),
                 count_sql: "SELECT COUNT(*) FROM \"users\"".into(),
+                object_type: ObjectType::Table,
             }
         );
     }
@@ -524,6 +567,24 @@ mod tests {
                 object_name: "testschema.user".into(),
                 generated_sql: "SELECT * FROM \"testschema\".\"user\" LIMIT 100".into(),
                 count_sql: "SELECT COUNT(*) FROM \"testschema\".\"user\"".into(),
+                object_type: ObjectType::Table,
+            }
+        );
+    }
+
+    #[test]
+    fn test_open_view_browser() {
+        let mut tm = TabManager::new();
+        let id = tm.open_view_browser("active_users".into(), Some("public".into()));
+        let tab = tm.tab_by_id(id).unwrap();
+        assert_eq!(tab.title, "active_users");
+        assert_eq!(
+            tab.tab_type,
+            TabType::TableBrowser {
+                object_name: "public.active_users".into(),
+                generated_sql: "SELECT * FROM \"public\".\"active_users\" LIMIT 100".into(),
+                count_sql: "SELECT COUNT(*) FROM \"public\".\"active_users\"".into(),
+                object_type: ObjectType::View,
             }
         );
     }
@@ -616,6 +677,31 @@ mod tests {
         let id1 = tm.open_function_view("fn".into(), Some("public".into()));
         let _id2 = tm.open_sql_editor();
         let id3 = tm.open_function_view("fn".into(), Some("public".into()));
+        assert_eq!(id1, id3);
+        assert_eq!(tm.tabs().len(), 2);
+    }
+
+    #[test]
+    fn test_open_view_source() {
+        let mut tm = TabManager::new();
+        let id = tm.open_view_source("active_users".into(), Some("public".into()));
+        let tab = tm.tab_by_id(id).unwrap();
+        assert_eq!(tab.title, "active_users source");
+        assert_eq!(
+            tab.tab_type,
+            TabType::ViewSource {
+                object_name: "public.active_users".into(),
+                definition: None,
+            }
+        );
+    }
+
+    #[test]
+    fn test_open_view_source_reuses_existing() {
+        let mut tm = TabManager::new();
+        let id1 = tm.open_view_source("v_users".into(), None);
+        let _id2 = tm.open_sql_editor();
+        let id3 = tm.open_view_source("v_users".into(), None);
         assert_eq!(id1, id3);
         assert_eq!(tm.tabs().len(), 2);
     }

@@ -294,8 +294,11 @@ fn object_key(obj: &DbObject) -> String {
 
 fn open_object(tab_manager: &mut TabManager, obj: &DbObject) {
     match obj.object_type {
-        ObjectType::Table | ObjectType::View => {
+        ObjectType::Table => {
             tab_manager.open_table_browser(obj.name.clone(), obj.schema.clone());
+        }
+        ObjectType::View => {
+            tab_manager.open_view_browser(obj.name.clone(), obj.schema.clone());
         }
         ObjectType::Trigger => {
             tab_manager.open_trigger_view(obj.name.clone(), obj.schema.clone());

@@ -1,11 +1,37 @@
 .sql-display {
+    display: flex;
+    align-items: center;
+    gap: 12px;
     padding: 4px 12px;
     background: var(--bg-tertiary);
     font-size: 12px;
     color: var(--text-secondary);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
     border-bottom: 1px solid var(--border);
     font-family: inherit;
+}
+
+.sql-display code {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sql-action-btn {
+    flex: 0 0 auto;
+    margin-left: auto;
+    padding: 2px 8px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 12px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.sql-action-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
 }
