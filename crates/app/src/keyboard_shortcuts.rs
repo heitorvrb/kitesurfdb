@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
-use crate::operation_feedback::{OP_TIMEOUT, timeout_error_message};
 use app_core::tab_manager::{TabManager, TabType};
+use crate::operation_feedback::{OP_TIMEOUT, timeout_error_message};
+use crate::utils::split_qualified_name;
 use db::traits::DbBackend;
 use db::types::{ObjectType, SchemaInfo};
 use dioxus::prelude::*;
@@ -121,14 +122,6 @@ fn on_view_source(mut tab_manager: Signal<TabManager>) {
             let (schema, name) = split_qualified_name(&object_name);
             tab_manager.write().open_view_source(name, schema);
         }
-    }
-}
-
-fn split_qualified_name(object_name: &str) -> (Option<String>, String) {
-    if let Some((schema, name)) = object_name.rsplit_once('.') {
-        (Some(schema.to_string()), name.to_string())
-    } else {
-        (None, object_name.to_string())
     }
 }
 

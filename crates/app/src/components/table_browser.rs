@@ -12,6 +12,7 @@ use super::sql_display::SqlDisplay;
 use crate::operation_feedback::{
     OP_TIMEOUT, SLOW_WARNING_MS, remaining_timeout, slow_warning_message, timeout_error_message,
 };
+use crate::utils::split_qualified_name;
 
 #[css_module("/assets/styles/table_browser.css")]
 struct Styles;
@@ -367,10 +368,4 @@ pub fn TableBrowser(
     }
 }
 
-fn split_qualified_name(object_name: &str) -> (Option<String>, String) {
-    if let Some((schema, name)) = object_name.split_once('.') {
-        (Some(schema.to_string()), name.to_string())
-    } else {
-        (None, object_name.to_string())
-    }
-}
+
