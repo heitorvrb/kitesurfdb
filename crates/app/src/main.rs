@@ -3,6 +3,7 @@ mod components;
 mod highlight;
 mod keyboard_shortcuts;
 mod operation_feedback;
+mod utils;
 
 use dioxus::desktop::tao::window::Theme;
 use dioxus::desktop::muda::Menu;
