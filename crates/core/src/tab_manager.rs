@@ -3,6 +3,7 @@ use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
 use crate::sql_ordering::{cycle_order_by, parse_order_items, sort_column_key};
+use crate::sql_where::{set_where_clause, strip_leading_where, validate_where_predicate};
 
 pub use crate::sql_ordering::{ColumnOrderInfo, SortDirection};
 
@@ -18,6 +19,7 @@ pub enum TabType {
         generated_sql: String,
         count_sql: String,
         object_type: ObjectType,
+        where_clause: String,
     },
     TriggerView {
         object_name: String,
@@ -302,8 +304,45 @@ impl TabManager {
                 generated_sql: sql,
                 count_sql,
                 object_type,
+                where_clause: String::new(),
             },
         )
+    }
+
+    pub fn set_table_browser_where(&mut self, id: Uuid, text: String) -> bool {
+        let normalized = strip_leading_where(text.trim()).to_string();
+        let validation = validate_where_predicate(&normalized);
+
+        let Some(tab) = self.tab_by_id_mut(id) else {
+            return false;
+        };
+        if !matches!(tab.tab_type, TabType::TableBrowser { .. }) {
+            return false;
+        }
+
+        if let Err(msg) = validation {
+            tab.error = Some(msg);
+            return false;
+        }
+
+        if let TabType::TableBrowser {
+            generated_sql,
+            count_sql,
+            where_clause,
+            ..
+        } = &mut tab.tab_type
+        {
+            *generated_sql = set_where_clause(generated_sql, &normalized);
+            *count_sql = set_where_clause(count_sql, &normalized);
+            *where_clause = normalized;
+        }
+
+        tab.result = None;
+        tab.total_count = None;
+        tab.error = None;
+        tab.is_loading = false;
+
+        true
     }
 
     pub fn cycle_order_by_column(&mut self, id: Uuid, column_name: &str) -> Option<String> {
@@ -551,6 +590,7 @@ mod tests {
                 generated_sql: "SELECT * FROM \"users\" LIMIT 100".into(),
                 count_sql: "SELECT COUNT(*) FROM \"users\"".into(),
                 object_type: ObjectType::Table,
+                where_clause: String::new(),
             }
         );
     }
@@ -568,6 +608,7 @@ mod tests {
                 generated_sql: "SELECT * FROM \"testschema\".\"user\" LIMIT 100".into(),
                 count_sql: "SELECT COUNT(*) FROM \"testschema\".\"user\"".into(),
                 object_type: ObjectType::Table,
+                where_clause: String::new(),
             }
         );
     }
@@ -585,6 +626,7 @@ mod tests {
                 generated_sql: "SELECT * FROM \"public\".\"active_users\" LIMIT 100".into(),
                 count_sql: "SELECT COUNT(*) FROM \"public\".\"active_users\"".into(),
                 object_type: ObjectType::View,
+                where_clause: String::new(),
             }
         );
     }
@@ -841,6 +883,150 @@ mod tests {
                 }
             ]
         );
+    }
+
+    #[test]
+    fn test_set_table_browser_where_injects_into_both_sqls() {
+        let mut tm = TabManager::new();
+        let id = tm.open_table_browser("users".into(), None);
+
+        assert!(tm.set_table_browser_where(id, "id > 5".into()));
+        let tab = tm.tab_by_id(id).unwrap();
+        let TabType::TableBrowser {
+            generated_sql,
+            count_sql,
+            where_clause,
+            ..
+        } = &tab.tab_type
+        else {
+            panic!("expected TableBrowser");
+        };
+        assert_eq!(
+            generated_sql,
+            "SELECT * FROM \"users\" WHERE id > 5 LIMIT 100"
+        );
+        assert_eq!(count_sql, "SELECT COUNT(*) FROM \"users\" WHERE id > 5");
+        assert_eq!(where_clause, "id > 5");
+    }
+
+    #[test]
+    fn test_set_table_browser_where_replaces_and_clears() {
+        let mut tm = TabManager::new();
+        let id = tm.open_table_browser("users".into(), None);
+
+        tm.set_table_browser_where(id, "id > 5".into());
+        tm.set_table_browser_where(id, "name = 'a'".into());
+        let tab = tm.tab_by_id(id).unwrap();
+        let TabType::TableBrowser {
+            generated_sql,
+            count_sql,
+            ..
+        } = &tab.tab_type
+        else {
+            panic!();
+        };
+        assert_eq!(
+            generated_sql,
+            "SELECT * FROM \"users\" WHERE name = 'a' LIMIT 100"
+        );
+        assert_eq!(count_sql, "SELECT COUNT(*) FROM \"users\" WHERE name = 'a'");
+
+        tm.set_table_browser_where(id, "   ".into());
+        let tab = tm.tab_by_id(id).unwrap();
+        let TabType::TableBrowser {
+            generated_sql,
+            count_sql,
+            where_clause,
+            ..
+        } = &tab.tab_type
+        else {
+            panic!();
+        };
+        assert_eq!(generated_sql, "SELECT * FROM \"users\" LIMIT 100");
+        assert_eq!(count_sql, "SELECT COUNT(*) FROM \"users\"");
+        assert!(where_clause.is_empty());
+    }
+
+    #[test]
+    fn test_set_table_browser_where_strips_leading_keyword() {
+        let mut tm = TabManager::new();
+        let id = tm.open_table_browser("users".into(), None);
+
+        tm.set_table_browser_where(id, "WHERE id = 1".into());
+        let tab = tm.tab_by_id(id).unwrap();
+        let TabType::TableBrowser {
+            generated_sql,
+            where_clause,
+            ..
+        } = &tab.tab_type
+        else {
+            panic!();
+        };
+        assert_eq!(
+            generated_sql,
+            "SELECT * FROM \"users\" WHERE id = 1 LIMIT 100"
+        );
+        assert_eq!(where_clause, "id = 1");
+    }
+
+    #[test]
+    fn test_set_table_browser_where_rejects_filter_with_order_by() {
+        let mut tm = TabManager::new();
+        let id = tm.open_table_browser("users".into(), None);
+        tm.set_table_browser_where(id, "id < 5".into());
+
+        let applied = tm.set_table_browser_where(id, "id < 5 ORDER BY id DESC".into());
+        assert!(!applied);
+
+        let tab = tm.tab_by_id(id).unwrap();
+        let TabType::TableBrowser {
+            generated_sql,
+            count_sql,
+            where_clause,
+            ..
+        } = &tab.tab_type
+        else {
+            panic!();
+        };
+        // Existing filter is preserved; the bad input did not overwrite it
+        assert_eq!(
+            generated_sql,
+            "SELECT * FROM \"users\" WHERE id < 5 LIMIT 100"
+        );
+        assert_eq!(count_sql, "SELECT COUNT(*) FROM \"users\" WHERE id < 5");
+        assert_eq!(where_clause, "id < 5");
+
+        let err = tab.error.as_ref().expect("error should be set");
+        assert!(err.contains("ORDER"), "got error: {err}");
+    }
+
+    #[test]
+    fn test_set_table_browser_where_returns_false_for_non_browser_tab() {
+        let mut tm = TabManager::new();
+        let id = tm.open_sql_editor();
+        assert!(!tm.set_table_browser_where(id, "x = 1".into()));
+    }
+
+    #[test]
+    fn test_set_table_browser_where_clears_result_state() {
+        let mut tm = TabManager::new();
+        let id = tm.open_table_browser("users".into(), None);
+        let tab = tm.tab_by_id_mut(id).unwrap();
+        tab.result = Some(QueryResult {
+            columns: Vec::new(),
+            rows: Vec::new(),
+            rows_affected: 0,
+            execution_time: std::time::Duration::from_millis(1),
+            query: "stale".into(),
+        });
+        tab.total_count = Some(42);
+        tab.error = Some("stale".into());
+
+        tm.set_table_browser_where(id, "id = 1".into());
+        let tab = tm.tab_by_id(id).unwrap();
+        assert!(tab.result.is_none());
+        assert!(tab.total_count.is_none());
+        assert!(tab.error.is_none());
     }
 
     #[test]

@@ -195,13 +195,27 @@ pub fn TableBrowser(
         }
     });
 
-    let (generated_sql, result, error, is_loading, total_count, ordering, view_source_target) = {
+    let (
+        generated_sql,
+        where_clause,
+        result,
+        error,
+        is_loading,
+        total_count,
+        ordering,
+        view_source_target,
+    ) = {
         let tm = tab_manager.read();
         let tab = tm.tab_by_id(tab_id);
-        let sql = tab
+        let (sql, where_clause) = tab
             .and_then(|t| {
-                if let TabType::TableBrowser { generated_sql, .. } = &t.tab_type {
-                    Some(generated_sql.clone())
+                if let TabType::TableBrowser {
+                    generated_sql,
+                    where_clause,
+                    ..
+                } = &t.tab_type
+                {
+                    Some((generated_sql.clone(), where_clause.clone()))
                 } else {
                     None
                 }
@@ -231,6 +245,7 @@ pub fn TableBrowser(
         });
         (
             sql,
+            where_clause,
             result,
             error,
             is_loading,
@@ -239,6 +254,8 @@ pub fn TableBrowser(
             view_source_target,
         )
     };
+
+    let mut where_input = use_signal(|| where_clause.clone());
 
     let row_count = result.as_ref().map(|r| r.rows.len()).unwrap_or(0);
     let has_more = row_count > 0 && row_count % PAGE_SIZE == 0;
@@ -338,6 +355,38 @@ pub fn TableBrowser(
                 }
             } else {
                 SqlDisplay { sql: generated_sql }
+            }
+            div { class: Styles::where_bar,
+                span { class: Styles::where_label, "WHERE" }
+                input {
+                    class: Styles::where_input,
+                    r#type: "text",
+                    placeholder: "Type a filter and press Enter (e.g. id > 5)",
+                    value: "{where_input.read()}",
+                    oninput: move |evt| where_input.set(evt.value()),
+                    onkeydown: move |evt: KeyboardEvent| {
+                        if evt.key() == Key::Enter {
+                            evt.prevent_default();
+                            let value = where_input.read().clone();
+                            let applied = tab_manager.write().set_table_browser_where(tab_id, value);
+                            if applied {
+                                let normalized = {
+                                    let tm = tab_manager.read();
+                                    tm.tab_by_id(tab_id).and_then(|t| {
+                                        if let TabType::TableBrowser { where_clause, .. } = &t.tab_type {
+                                            Some(where_clause.clone())
+                                        } else {
+                                            None
+                                        }
+                                    })
+                                };
+                                if let Some(normalized) = normalized {
+                                    where_input.set(normalized);
+                                }
+                            }
+                        }
+                    },
+                }
             }
             if is_loading {
                 div { class: Styles::loading, "Loading object... {elapsed_secs:.1}s" }

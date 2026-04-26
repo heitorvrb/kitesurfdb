@@ -18,6 +18,40 @@
     font-size: 12px;
 }
 
+.where-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px;
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border);
+}
+
+.where-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-family: monospace;
+    flex: 0 0 auto;
+}
+
+.where-input {
+    flex: 1;
+    min-width: 0;
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-family: monospace;
+    font-size: 12px;
+}
+
+.where-input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
 .load-more-bar {
     display: flex;
     justify-content: center;
