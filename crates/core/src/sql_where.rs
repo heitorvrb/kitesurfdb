@@ -12,7 +12,61 @@ const FORBIDDEN_KEYWORDS: &[&str] = &[
     "except",
 ];
 
+fn find_forbidden_meta(text: &str) -> Option<&'static str> {
+    let bytes = text.as_bytes();
+    let mut i = 0;
+    let mut in_single = false;
+    let mut in_double = false;
+    while i < bytes.len() {
+        if in_single {
+            if bytes[i] == b'\'' {
+                if i + 1 < bytes.len() && bytes[i + 1] == b'\'' {
+                    i += 2;
+                    continue;
+                }
+                in_single = false;
+            }
+            i += 1;
+            continue;
+        }
+        if in_double {
+            if bytes[i] == b'"' {
+                if i + 1 < bytes.len() && bytes[i + 1] == b'"' {
+                    i += 2;
+                    continue;
+                }
+                in_double = false;
+            }
+            i += 1;
+            continue;
+        }
+        match bytes[i] {
+            b'\'' => {
+                in_single = true;
+                i += 1;
+                continue;
+            }
+            b'"' => {
+                in_double = true;
+                i += 1;
+                continue;
+            }
+            b';' => return Some(";"),
+            b'-' if i + 1 < bytes.len() && bytes[i + 1] == b'-' => return Some("--"),
+            b'/' if i + 1 < bytes.len() && bytes[i + 1] == b'*' => return Some("/*"),
+            _ => {}
+        }
+        i += 1;
+    }
+    None
+}
+
 pub(crate) fn validate_where_predicate(text: &str) -> Result<(), String> {
+    if let Some(meta) = find_forbidden_meta(text) {
+        return Err(format!(
+            "Filter cannot contain `{meta}`. Use only a predicate expression."
+        ));
+    }
     for kw in FORBIDDEN_KEYWORDS {
         if find_top_level_keyword(text, kw, 0).is_some() {
             return Err(format!(
@@ -207,6 +261,20 @@ mod tests {
     fn validate_allows_keywords_inside_subquery_parens() {
         let predicate = "id IN (SELECT id FROM t ORDER BY x LIMIT 5)";
         assert!(validate_where_predicate(predicate).is_ok());
+    }
+
+    #[test]
+    fn validate_rejects_meta_characters() {
+        assert!(validate_where_predicate("1=1; SELECT 1").is_err());
+        assert!(validate_where_predicate("id = 1 -- hi").is_err());
+        assert!(validate_where_predicate("id = 1 /* hi */").is_err());
+    }
+
+    #[test]
+    fn validate_allows_meta_characters_inside_strings() {
+        assert!(validate_where_predicate("name = 'a;b'").is_ok());
+        assert!(validate_where_predicate("note = 'a--b'").is_ok());
+        assert!(validate_where_predicate("note = 'a/*b'").is_ok());
     }
 
     #[test]
