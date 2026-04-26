@@ -23,7 +23,7 @@ fn can_match_keyword(sql: &str, idx: usize, keyword_len: usize) -> bool {
     before_ok && after_ok
 }
 
-fn find_top_level_keyword(sql: &str, keyword: &str, min_idx: usize) -> Option<usize> {
+pub(crate) fn find_top_level_keyword(sql: &str, keyword: &str, min_idx: usize) -> Option<usize> {
     if sql.is_empty() {
         return None;
     }

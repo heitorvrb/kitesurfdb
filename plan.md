@@ -193,7 +193,7 @@ User action (Run button / Ctrl+Enter / click table in sidebar)
 
 - [x] There should be a way to see the view's source query.
 
-- [ ] Feature: Inline where - when on table or view mode, under the query being executed, there should be an input field always available where the user can type a filter, and that filter is automatically added to the WHERE of the query.
+- [x] Feature: Inline where - when on table or view mode, under the query being executed, there should be an input field always available where the user can type a filter, and that filter is automatically added to the WHERE of the query.
 
 - [x] Fix colors in Search dialog
 - [x] j and k move up and down in the search results list
