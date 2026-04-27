@@ -1,13 +1,14 @@
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use app_core::sql_update::{build_updates_for_tab, quote_qualified};
 use app_core::tab_manager::{PAGE_SIZE, TabManager, TabType};
 use db::traits::DbBackend;
 use db::types::{DbValue, ObjectType, SchemaInfo};
 use dioxus::prelude::*;
 use uuid::Uuid;
 
-use super::results_panel::ResultsPanel;
+use super::results_panel::{CellEdit, ResultsPanel};
 use super::sql_display::SqlDisplay;
 use crate::operation_feedback::{
     OP_TIMEOUT, SLOW_WARNING_MS, remaining_timeout, slow_warning_message, timeout_error_message,
@@ -28,6 +29,7 @@ pub fn TableBrowser(
     let mut schema_info = schema_info;
     let mut loading_started_at: Signal<Option<Instant>> = use_signal(|| None);
     let mut loading_elapsed_ms: Signal<u128> = use_signal(|| 0);
+    let mut show_no_pk_confirm: Signal<bool> = use_signal(|| false);
 
     use_future(move || async move {
         loop {
@@ -255,6 +257,24 @@ pub fn TableBrowser(
         )
     };
 
+    let (edited_cells, object_name_for_save) = {
+        let tm = tab_manager.read();
+        let tab = tm.tab_by_id(tab_id);
+        tab.and_then(|t| {
+            if let TabType::TableBrowser {
+                edited_cells,
+                object_name,
+                ..
+            } = &t.tab_type
+            {
+                Some((edited_cells.clone(), object_name.clone()))
+            } else {
+                None
+            }
+        })
+        .unwrap_or_default()
+    };
+
     let mut where_input = use_signal(|| where_clause.clone());
 
     let row_count = result.as_ref().map(|r| r.rows.len()).unwrap_or(0);
@@ -339,6 +359,130 @@ pub fn TableBrowser(
         }
     };
 
+    let run_transaction = move || {
+        spawn(async move {
+            let snapshot = {
+                let tm = tab_manager.read();
+                tm.tab_by_id(tab_id).and_then(|t| {
+                    if let TabType::TableBrowser {
+                        object_name,
+                        edited_cells,
+                        primary_keys,
+                        ..
+                    } = &t.tab_type
+                    {
+                        let result = t.result.as_ref()?;
+                        let (schema, table) = split_qualified_name(object_name);
+                        let qualified = quote_qualified(schema.as_deref(), &table);
+                        let pks = primary_keys.as_deref().unwrap_or(&[]).to_vec();
+                        Some((
+                            qualified,
+                            result.columns.clone(),
+                            result.rows.clone(),
+                            edited_cells.clone(),
+                            pks,
+                        ))
+                    } else {
+                        None
+                    }
+                })
+            };
+
+            let Some((qualified_table, columns, rows, edited_cells, pks)) = snapshot else {
+                return;
+            };
+
+            let b = { backend.read().as_ref().cloned() };
+            let Some(b) = b else {
+                if let Some(tab) = tab_manager.write().tab_by_id_mut(tab_id) {
+                    tab.error = Some("Not connected to a database".into());
+                }
+                return;
+            };
+
+            let bk = b.backend_kind();
+
+            match build_updates_for_tab(&qualified_table, &columns, &rows, &edited_cells, &pks, bk)
+            {
+                Ok(stmts) => match b.execute_transaction(&stmts).await {
+                    Ok(()) => {
+                        tab_manager.write().clear_edited_cells(tab_id);
+                        tab_manager.write().reset_for_refresh(tab_id);
+                    }
+                    Err(e) => {
+                        if let Some(tab) = tab_manager.write().tab_by_id_mut(tab_id) {
+                            tab.error = Some(e.to_string());
+                        }
+                    }
+                },
+                Err(e) => {
+                    if let Some(tab) = tab_manager.write().tab_by_id_mut(tab_id) {
+                        tab.error = Some(e);
+                    }
+                }
+            }
+        });
+    };
+
+    let save_edits = move |_| {
+        spawn(async move {
+            let cached_pks = {
+                let tm = tab_manager.read();
+                tm.tab_by_id(tab_id).and_then(|t| {
+                    if let TabType::TableBrowser { primary_keys, .. } = &t.tab_type {
+                        primary_keys.clone()
+                    } else {
+                        None
+                    }
+                })
+            };
+
+            let pks = if let Some(pks) = cached_pks {
+                pks
+            } else {
+                let object_name = {
+                    let tm = tab_manager.read();
+                    tm.tab_by_id(tab_id).and_then(|t| {
+                        if let TabType::TableBrowser { object_name, .. } = &t.tab_type {
+                            Some(object_name.clone())
+                        } else {
+                            None
+                        }
+                    })
+                };
+                let Some(object_name) = object_name else { return; };
+
+                let b = { backend.read().as_ref().cloned() };
+                let Some(b) = b else { return; };
+
+                let (schema, table) = split_qualified_name(&object_name);
+                match b.get_primary_keys(schema.as_deref(), &table).await {
+                    Ok(pks) => {
+                        tab_manager.write().set_table_browser_primary_keys(tab_id, pks.clone());
+                        pks
+                    }
+                    Err(e) => {
+                        if let Some(tab) = tab_manager.write().tab_by_id_mut(tab_id) {
+                            tab.error = Some(e.to_string());
+                        }
+                        return;
+                    }
+                }
+            };
+
+            if pks.is_empty() {
+                show_no_pk_confirm.set(true);
+            } else {
+                run_transaction();
+            }
+        });
+    };
+
+    let confirm_save = move |_| {
+        show_no_pk_confirm.set(false);
+        run_transaction();
+    };
+
     let elapsed_ms = *loading_elapsed_ms.read();
     let elapsed_secs = elapsed_ms as f64 / 1000.0;
     let taking_longer = is_loading && elapsed_ms >= SLOW_WARNING_MS;
@@ -403,12 +547,51 @@ pub fn TableBrowser(
                 on_refresh: refresh,
                 on_sort_column: sort_by_column,
                 ordering,
+                editable: true,
+                edited_cells,
+                on_cell_edit: move |edit: CellEdit| {
+                    tab_manager.write().set_edited_cell(
+                        tab_id,
+                        edit.row,
+                        &edit.column,
+                        edit.new_value,
+                    );
+                },
+                on_save: save_edits,
                 if has_more && !is_loading {
                     div { class: Styles::load_more_bar,
                         button {
                             class: Styles::load_more_btn,
                             onclick: load_more,
                             "Load more rows"
+                        }
+                    }
+                }
+            }
+            if *show_no_pk_confirm.read() {
+                div {
+                    class: Styles::confirm_overlay,
+                    onclick: move |_| show_no_pk_confirm.set(false),
+                    div {
+                        class: Styles::confirm_dialog,
+                        onclick: move |evt| evt.stop_propagation(),
+                        p { class: Styles::confirm_message,
+                            strong { "{object_name_for_save}" }
+                            " has no primary key. The save will use "
+                            strong { "all original column values" }
+                            " in each WHERE clause to identify rows. This may match more than one row. Continue?"
+                        }
+                        div { class: Styles::confirm_buttons,
+                            button {
+                                class: Styles::cancel_btn,
+                                onclick: move |_| show_no_pk_confirm.set(false),
+                                "Cancel"
+                            }
+                            button {
+                                class: Styles::confirm_btn,
+                                onclick: confirm_save,
+                                "Continue and save"
+                            }
                         }
                     }
                 }

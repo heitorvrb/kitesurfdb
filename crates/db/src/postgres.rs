@@ -114,6 +114,38 @@ impl DbBackend for PostgresBackend {
         })
     }
 
+    async fn execute_transaction(&self, statements: &[String]) -> Result<(), DbError> {
+        let mut tx = self.pool.begin().await?;
+        for stmt in statements {
+            sqlx::query(stmt).execute(&mut *tx).await?;
+        }
+        tx.commit().await?;
+        Ok(())
+    }
+
+    async fn get_primary_keys(
+        &self,
+        schema: Option<&str>,
+        table: &str,
+    ) -> Result<Vec<String>, DbError> {
+        let schema = schema.unwrap_or("public");
+        let sql = "SELECT kcu.column_name \
+                   FROM information_schema.table_constraints AS tc \
+                   JOIN information_schema.key_column_usage AS kcu \
+                     ON tc.constraint_schema = kcu.constraint_schema \
+                    AND tc.constraint_name = kcu.constraint_name \
+                   WHERE tc.constraint_type = 'PRIMARY KEY' \
+                     AND tc.table_schema = $1 \
+                     AND tc.table_name = $2 \
+                   ORDER BY kcu.ordinal_position";
+        let rows: Vec<PgRow> = sqlx::query(sql)
+            .bind(schema)
+            .bind(table)
+            .fetch_all(&self.pool)
+            .await?;
+        Ok(rows.iter().map(|row| row.get("column_name")).collect())
+    }
+
     async fn get_object_definition(
         &self,
         name: &str,
@@ -195,6 +227,10 @@ impl DbBackend for PostgresBackend {
 
     fn backend_name(&self) -> &'static str {
         "PostgreSQL"
+    }
+
+    fn backend_kind(&self) -> BackendType {
+        BackendType::Postgres
     }
 }
 

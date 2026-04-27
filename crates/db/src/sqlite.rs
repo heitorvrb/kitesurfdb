@@ -79,6 +79,41 @@ impl DbBackend for SqliteBackend {
         })
     }
 
+    async fn execute_transaction(&self, statements: &[String]) -> Result<(), DbError> {
+        let mut tx = self.pool.begin().await?;
+        for stmt in statements {
+            sqlx::query(stmt).execute(&mut *tx).await?;
+        }
+        tx.commit().await?;
+        Ok(())
+    }
+
+    async fn get_primary_keys(
+        &self,
+        _schema: Option<&str>,
+        table: &str,
+    ) -> Result<Vec<String>, DbError> {
+        // SQLite's PRAGMA does not accept bound parameters for the table name,
+        // so we must inline it; escape embedded double-quotes by doubling them.
+        let escaped = table.replace('"', "\"\"");
+        let sql = format!("PRAGMA table_info(\"{escaped}\")");
+        let rows: Vec<SqliteRow> = sqlx::query(&sql).fetch_all(&self.pool).await?;
+
+        let mut pks: Vec<(i64, String)> = rows
+            .iter()
+            .filter_map(|row| {
+                let pk: i64 = row.get("pk");
+                if pk > 0 {
+                    Some((pk, row.get::<String, _>("name")))
+                } else {
+                    None
+                }
+            })
+            .collect();
+        pks.sort_by_key(|(pos, _)| *pos);
+        Ok(pks.into_iter().map(|(_, name)| name).collect())
+    }
+
     async fn get_object_definition(
         &self,
         name: &str,
@@ -116,6 +151,10 @@ impl DbBackend for SqliteBackend {
 
     fn backend_name(&self) -> &'static str {
         "SQLite"
+    }
+
+    fn backend_kind(&self) -> BackendType {
+        BackendType::Sqlite
     }
 }
 
@@ -392,6 +431,100 @@ mod tests {
         let config = sqlite_config(":memory:");
         let backend = SqliteBackend::connect(&config).await.unwrap();
         assert_eq!(backend.backend_name(), "SQLite");
+    }
+
+    #[tokio::test]
+    async fn test_get_primary_keys_single() {
+        let config = sqlite_config(":memory:");
+        let backend = SqliteBackend::connect(&config).await.unwrap();
+
+        backend
+            .execute_query("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)")
+            .await
+            .unwrap();
+
+        let pks = backend.get_primary_keys(None, "users").await.unwrap();
+        assert_eq!(pks, vec!["id".to_string()]);
+    }
+
+    #[tokio::test]
+    async fn test_get_primary_keys_composite() {
+        let config = sqlite_config(":memory:");
+        let backend = SqliteBackend::connect(&config).await.unwrap();
+
+        backend
+            .execute_query(
+                "CREATE TABLE memberships (user_id INTEGER, group_id INTEGER, role TEXT, PRIMARY KEY (user_id, group_id))",
+            )
+            .await
+            .unwrap();
+
+        let pks = backend
+            .get_primary_keys(None, "memberships")
+            .await
+            .unwrap();
+        assert_eq!(pks, vec!["user_id".to_string(), "group_id".to_string()]);
+    }
+
+    #[tokio::test]
+    async fn test_get_primary_keys_none() {
+        let config = sqlite_config(":memory:");
+        let backend = SqliteBackend::connect(&config).await.unwrap();
+
+        backend
+            .execute_query("CREATE TABLE notes (body TEXT)")
+            .await
+            .unwrap();
+
+        let pks = backend.get_primary_keys(None, "notes").await.unwrap();
+        assert!(pks.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_execute_transaction_commits() {
+        let config = sqlite_config(":memory:");
+        let backend = SqliteBackend::connect(&config).await.unwrap();
+        backend
+            .execute_query("CREATE TABLE t (a INTEGER)")
+            .await
+            .unwrap();
+
+        backend
+            .execute_transaction(&[
+                "INSERT INTO t (a) VALUES (1)".into(),
+                "INSERT INTO t (a) VALUES (2)".into(),
+            ])
+            .await
+            .unwrap();
+
+        let result = backend
+            .execute_query("SELECT a FROM t ORDER BY a")
+            .await
+            .unwrap();
+        assert_eq!(result.rows.len(), 2);
+        assert_eq!(result.rows[0][0], DbValue::Int(1));
+        assert_eq!(result.rows[1][0], DbValue::Int(2));
+    }
+
+    #[tokio::test]
+    async fn test_execute_transaction_rolls_back() {
+        let config = sqlite_config(":memory:");
+        let backend = SqliteBackend::connect(&config).await.unwrap();
+        backend
+            .execute_query("CREATE TABLE t (a INTEGER)")
+            .await
+            .unwrap();
+
+        let result = backend
+            .execute_transaction(&[
+                "INSERT INTO t (a) VALUES (1)".into(),
+                "INSERT INTO nonexistent (x) VALUES (2)".into(),
+            ])
+            .await;
+        assert!(result.is_err());
+
+        let select = backend.execute_query("SELECT a FROM t").await.unwrap();
+        assert!(select.rows.is_empty(), "transaction should have rolled back");
     }
 
     #[tokio::test]

@@ -1,9 +1,19 @@
 use app_core::tab_manager::{ColumnOrderInfo, SortDirection};
 use db::types::{DbValue, QueryResult};
 use dioxus::prelude::*;
+use std::collections::BTreeMap;
 
 #[css_module("/assets/styles/results_panel.css")]
 struct Styles;
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct CellEdit {
+    pub row: usize,
+    pub column: String,
+    /// `Some(s)` to record the new value; `None` to clear a pending edit
+    /// (e.g. user reverted the cell back to its original value).
+    pub new_value: Option<String>,
+}
 
 fn normalize_column_key(name: &str) -> String {
     let trimmed = name.trim();
@@ -15,6 +25,12 @@ fn normalize_column_key(name: &str) -> String {
     unquoted.to_ascii_lowercase()
 }
 
+fn is_editable_value(value: &DbValue) -> bool {
+    !matches!(value, DbValue::Bytes(_))
+}
+
+const EDIT_INPUT_ID: &str = "cell-edit-input";
+
 #[component]
 pub fn ResultsPanel(
     result: Option<QueryResult>,
@@ -23,8 +39,32 @@ pub fn ResultsPanel(
     #[props(default)] on_refresh: Option<EventHandler>,
     #[props(default)] on_sort_column: Option<EventHandler<String>>,
     #[props(default)] ordering: Vec<ColumnOrderInfo>,
+    #[props(default = false)] editable: bool,
+    #[props(default)] edited_cells: BTreeMap<usize, BTreeMap<String, String>>,
+    #[props(default)] on_cell_edit: Option<EventHandler<CellEdit>>,
+    #[props(default)] on_save: Option<EventHandler>,
     children: Element,
 ) -> Element {
+    let mut editing: Signal<Option<(usize, String)>> = use_signal(|| None);
+    let mut edit_text: Signal<String> = use_signal(String::new);
+
+    // Focus the input whenever a cell enters edit mode.
+    use_effect(move || {
+        if editing.read().is_some() {
+            document::eval(&format!(
+                r#"
+                requestAnimationFrame(() => {{
+                    const el = document.getElementById('{EDIT_INPUT_ID}');
+                    if (el) {{ el.focus(); el.select(); }}
+                }});
+                "#
+            ));
+        }
+    });
+
+    let pending_count: usize = edited_cells.values().map(|r| r.len()).sum();
+    let edited_rows = edited_cells.len();
+
     rsx! {
         div { class: Styles::results_panel,
             if let Some(err) = &error {
@@ -42,6 +82,18 @@ pub fn ResultsPanel(
                             class: Styles::refresh_btn,
                             onclick: move |_| handler.call(()),
                             "↻ Refresh"
+                        }
+                    }
+                    if pending_count > 0 {
+                        if let Some(save_handler) = on_save.clone() {
+                            span { class: Styles::edits_pending,
+                                "{pending_count} pending edit(s) across {edited_rows} row(s)"
+                            }
+                            button {
+                                class: Styles::save_btn,
+                                onclick: move |_| save_handler.call(()),
+                                "Save ({edited_rows})"
+                            }
                         }
                     }
                 }
@@ -87,12 +139,115 @@ pub fn ResultsPanel(
                             }
                         }
                         tbody {
-                            for row in &result.rows {
+                            for (row_idx, row) in result.rows.iter().enumerate() {
                                 tr {
-                                    for cell in row {
-                                        td {
-                                            class: if *cell == DbValue::Null { Styles::null_value.to_string() } else { String::new() },
-                                            "{cell}"
+                                    for (col_idx, cell) in row.iter().enumerate() {
+                                        {
+                                            let col_name = result.columns[col_idx].name.clone();
+                                            let is_editing = editing.read().as_ref()
+                                                .map(|(r, c)| *r == row_idx && c == &col_name)
+                                                .unwrap_or(false);
+                                            let edited_value = edited_cells
+                                                .get(&row_idx)
+                                                .and_then(|cols| cols.get(&col_name))
+                                                .cloned();
+                                            let is_edited = edited_value.is_some();
+                                            let cell_can_be_edited = editable && is_editable_value(cell);
+
+                                            let display_text = match &edited_value {
+                                                Some(v) => v.clone(),
+                                                None => cell.to_string(),
+                                            };
+                                            let is_null_display = edited_value.is_none()
+                                                && *cell == DbValue::Null;
+
+                                            let mut td_classes: Vec<String> = Vec::new();
+                                            if is_null_display { td_classes.push(Styles::null_value.to_string()); }
+                                            if is_edited { td_classes.push(Styles::edited_cell.to_string()); }
+                                            if cell_can_be_edited { td_classes.push(Styles::editable_cell.to_string()); }
+                                            let td_class = td_classes.join(" ");
+
+                                            let original_value = cell.clone();
+                                            let col_for_dblclick = col_name.clone();
+                                            let original_for_dblclick = original_value.clone();
+                                            let edited_for_dblclick = edited_value.clone();
+
+                                            let original_for_commit = original_value.clone();
+                                            let col_for_commit = col_name.clone();
+                                            let handler_for_commit = on_cell_edit.clone();
+
+                                            let original_for_blur = original_value.clone();
+                                            let col_for_blur = col_name.clone();
+                                            let handler_for_blur = on_cell_edit.clone();
+
+                                            rsx! {
+                                                td {
+                                                    class: "{td_class}",
+                                                    ondoubleclick: move |_| {
+                                                        if !cell_can_be_edited { return; }
+                                                        let seed = match &edited_for_dblclick {
+                                                            Some(v) => v.clone(),
+                                                            None => original_for_dblclick.to_string(),
+                                                        };
+                                                        edit_text.set(seed);
+                                                        editing.set(Some((row_idx, col_for_dblclick.clone())));
+                                                    },
+                                                    if is_editing {
+                                                        input {
+                                                            id: "{EDIT_INPUT_ID}",
+                                                            class: Styles::cell_edit_input,
+                                                            value: "{edit_text.read()}",
+                                                            oninput: move |evt| edit_text.set(evt.value()),
+                                                            onkeydown: move |evt: KeyboardEvent| {
+                                                                match evt.key() {
+                                                                    Key::Enter => {
+                                                                        evt.prevent_default();
+                                                                        let new_text = edit_text.read().clone();
+                                                                        let original_text = original_for_commit.to_string();
+                                                                        let new_value = if new_text == original_text {
+                                                                            None
+                                                                        } else {
+                                                                            Some(new_text)
+                                                                        };
+                                                                        if let Some(h) = handler_for_commit.as_ref() {
+                                                                            h.call(CellEdit {
+                                                                                row: row_idx,
+                                                                                column: col_for_commit.clone(),
+                                                                                new_value,
+                                                                            });
+                                                                        }
+                                                                        editing.set(None);
+                                                                    }
+                                                                    Key::Escape => {
+                                                                        evt.prevent_default();
+                                                                        editing.set(None);
+                                                                    }
+                                                                    _ => {}
+                                                                }
+                                                            },
+                                                            onblur: move |_| {
+                                                                let new_text = edit_text.read().clone();
+                                                                let original_text = original_for_blur.to_string();
+                                                                let new_value = if new_text == original_text {
+                                                                    None
+                                                                } else {
+                                                                    Some(new_text)
+                                                                };
+                                                                if let Some(h) = handler_for_blur.as_ref() {
+                                                                    h.call(CellEdit {
+                                                                        row: row_idx,
+                                                                        column: col_for_blur.clone(),
+                                                                        new_value,
+                                                                    });
+                                                                }
+                                                                editing.set(None);
+                                                            },
+                                                        }
+                                                    } else {
+                                                        "{display_text}"
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }
