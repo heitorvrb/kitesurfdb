@@ -56,6 +56,14 @@
   </screenshots>
 
   <releases>
+    <release version="0.1.5" date="2026-04-25">
+      <description>
+        <ul>
+          <li>WHERE field filtering</li>
+          <li>Edit field inline</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.4" date="2026-04-19">
       <description>
         <ul>

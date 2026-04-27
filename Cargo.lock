@@ -678,7 +678,7 @@ dependencies = [
 
 [[package]]
 name = "core"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "db",
  "dirs 6.0.0",
@@ -894,7 +894,7 @@ checksum = "d7a1e2f27636f116493b8b860f5546edb47c8d8f8ea73e1d2a20be88e28d1fea"
 
 [[package]]
 name = "db"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "async-trait",
  "chrono",
@@ -2599,7 +2599,7 @@ dependencies = [
 
 [[package]]
 name = "kitesurfdb"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "core",
  "dark-light",
