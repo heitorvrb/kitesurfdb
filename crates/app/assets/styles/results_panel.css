@@ -82,3 +82,48 @@
     color: var(--null-color);
     font-style: italic;
 }
+
+.editable-cell {
+    cursor: text;
+}
+
+.edited-cell {
+    background: rgba(137, 180, 250, 0.25);
+    font-weight: 600;
+}
+
+.cell-edit-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 2px 4px;
+    border: none;
+    outline: 2px solid var(--accent);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: inherit;
+}
+
+.edits-pending {
+    margin-left: auto;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+.save-btn {
+    padding: 1px 10px;
+    border: 1px solid var(--success);
+    border-radius: 3px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 12px;
+    background: var(--success);
+    color: var(--bg-primary);
+    line-height: 1.4;
+    font-weight: 600;
+}
+
+.save-btn:hover {
+    background: var(--success-hover);
+    border-color: var(--success-hover);
+}

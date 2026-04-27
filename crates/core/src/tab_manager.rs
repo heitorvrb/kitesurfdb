@@ -1,4 +1,5 @@
 use db::types::{ObjectType, QueryResult};
+use std::collections::BTreeMap;
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
@@ -20,6 +21,13 @@ pub enum TabType {
         count_sql: String,
         object_type: ObjectType,
         where_clause: String,
+        /// Cached list of primary key column names. `None` means we have not
+        /// fetched it yet; `Some(empty)` means the table has no primary key.
+        primary_keys: Option<Vec<String>>,
+        /// Pending edits the user has typed but not yet saved.
+        /// Outer key is the row index in `Tab.result.rows`; inner key is the
+        /// column name; value is the user's typed string for that cell.
+        edited_cells: BTreeMap<usize, BTreeMap<String, String>>,
     },
     TriggerView {
         object_name: String,
@@ -94,6 +102,72 @@ impl TabManager {
             tab.total_count = None;
             tab.error = None;
             tab.is_loading = false;
+            if let TabType::TableBrowser { edited_cells, .. } = &mut tab.tab_type {
+                edited_cells.clear();
+            }
+        }
+    }
+
+    /// Record (or clear) a pending edit for a single cell. If `new_value` is
+    /// `None`, any existing edit is removed. Returns `true` if the call mutated
+    /// state.
+    pub fn set_edited_cell(
+        &mut self,
+        id: Uuid,
+        row_idx: usize,
+        col_name: &str,
+        new_value: Option<String>,
+    ) -> bool {
+        let Some(tab) = self.tab_by_id_mut(id) else {
+            return false;
+        };
+        let TabType::TableBrowser { edited_cells, .. } = &mut tab.tab_type else {
+            return false;
+        };
+
+        match new_value {
+            Some(val) => {
+                edited_cells
+                    .entry(row_idx)
+                    .or_default()
+                    .insert(col_name.to_string(), val);
+                true
+            }
+            None => {
+                if let Some(row_edits) = edited_cells.get_mut(&row_idx) {
+                    let removed = row_edits.remove(col_name).is_some();
+                    if row_edits.is_empty() {
+                        edited_cells.remove(&row_idx);
+                    }
+                    removed
+                } else {
+                    false
+                }
+            }
+        }
+    }
+
+    pub fn clear_edited_cells(&mut self, id: Uuid) {
+        if let Some(tab) = self.tab_by_id_mut(id)
+            && let TabType::TableBrowser { edited_cells, .. } = &mut tab.tab_type
+        {
+            edited_cells.clear();
+        }
+    }
+
+    pub fn set_table_browser_primary_keys(&mut self, id: Uuid, pks: Vec<String>) {
+        if let Some(tab) = self.tab_by_id_mut(id)
+            && let TabType::TableBrowser { primary_keys, .. } = &mut tab.tab_type
+        {
+            *primary_keys = Some(pks);
+        }
+    }
+
+    /// Total number of rows that have at least one pending edit.
+    pub fn total_edited_rows(tab: &Tab) -> usize {
+        match &tab.tab_type {
+            TabType::TableBrowser { edited_cells, .. } => edited_cells.len(),
+            _ => 0,
         }
     }
 
@@ -305,6 +379,8 @@ impl TabManager {
                 count_sql,
                 object_type,
                 where_clause: String::new(),
+                primary_keys: None,
+                edited_cells: BTreeMap::new(),
             },
         )
     }
@@ -591,6 +667,8 @@ mod tests {
                 count_sql: "SELECT COUNT(*) FROM \"users\"".into(),
                 object_type: ObjectType::Table,
                 where_clause: String::new(),
+                primary_keys: None,
+                edited_cells: BTreeMap::new(),
             }
         );
     }
@@ -609,6 +687,8 @@ mod tests {
                 count_sql: "SELECT COUNT(*) FROM \"testschema\".\"user\"".into(),
                 object_type: ObjectType::Table,
                 where_clause: String::new(),
+                primary_keys: None,
+                edited_cells: BTreeMap::new(),
             }
         );
     }
@@ -627,6 +707,8 @@ mod tests {
                 count_sql: "SELECT COUNT(*) FROM \"public\".\"active_users\"".into(),
                 object_type: ObjectType::View,
                 where_clause: String::new(),
+                primary_keys: None,
+                edited_cells: BTreeMap::new(),
             }
         );
     }
@@ -1049,5 +1131,83 @@ mod tests {
         });
 
         assert!(tm.tab_column_ordering(id).is_empty());
+    }
+
+    #[test]
+    fn set_edited_cell_records_and_clears() {
+        let mut tm = TabManager::new();
+        let id = tm.open_table_browser("users".into(), None);
+
+        assert!(tm.set_edited_cell(id, 0, "name", Some("Alice".into())));
+        let tab = tm.tab_by_id(id).unwrap();
+        let TabType::TableBrowser { edited_cells, .. } = &tab.tab_type else {
+            panic!();
+        };
+        assert_eq!(edited_cells.get(&0).unwrap().get("name").unwrap(), "Alice");
+        assert_eq!(TabManager::total_edited_rows(tab), 1);
+
+        // Clearing the same cell removes it.
+        assert!(tm.set_edited_cell(id, 0, "name", None));
+        let tab = tm.tab_by_id(id).unwrap();
+        let TabType::TableBrowser { edited_cells, .. } = &tab.tab_type else {
+            panic!();
+        };
+        assert!(edited_cells.is_empty());
+        assert_eq!(TabManager::total_edited_rows(tab), 0);
+    }
+
+    #[test]
+    fn set_edited_cell_only_works_on_table_browser() {
+        let mut tm = TabManager::new();
+        let id = tm.open_sql_editor();
+        assert!(!tm.set_edited_cell(id, 0, "name", Some("x".into())));
+    }
+
+    #[test]
+    fn clear_edited_cells_empties_map() {
+        let mut tm = TabManager::new();
+        let id = tm.open_table_browser("users".into(), None);
+        tm.set_edited_cell(id, 0, "name", Some("Alice".into()));
+        tm.set_edited_cell(id, 1, "name", Some("Bob".into()));
+
+        tm.clear_edited_cells(id);
+        let tab = tm.tab_by_id(id).unwrap();
+        let TabType::TableBrowser { edited_cells, .. } = &tab.tab_type else {
+            panic!();
+        };
+        assert!(edited_cells.is_empty());
+    }
+
+    #[test]
+    fn reset_for_refresh_clears_edits_too() {
+        let mut tm = TabManager::new();
+        let id = tm.open_table_browser("users".into(), None);
+        tm.set_edited_cell(id, 0, "name", Some("Alice".into()));
+
+        tm.reset_for_refresh(id);
+        let tab = tm.tab_by_id(id).unwrap();
+        let TabType::TableBrowser { edited_cells, .. } = &tab.tab_type else {
+            panic!();
+        };
+        assert!(edited_cells.is_empty());
+    }
+
+    #[test]
+    fn set_table_browser_primary_keys_caches_them() {
+        let mut tm = TabManager::new();
+        let id = tm.open_table_browser("users".into(), None);
+
+        let tab = tm.tab_by_id(id).unwrap();
+        let TabType::TableBrowser { primary_keys, .. } = &tab.tab_type else {
+            panic!();
+        };
+        assert!(primary_keys.is_none());
+
+        tm.set_table_browser_primary_keys(id, vec!["id".into()]);
+        let tab = tm.tab_by_id(id).unwrap();
+        let TabType::TableBrowser { primary_keys, .. } = &tab.tab_type else {
+            panic!();
+        };
+        assert_eq!(primary_keys.as_deref(), Some(&["id".to_string()][..]));
     }
 }

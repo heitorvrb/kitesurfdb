@@ -73,3 +73,72 @@
 .load-more-btn:hover {
     background: var(--bg-tertiary);
 }
+
+.confirm-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 110;
+}
+
+.confirm-dialog {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    max-width: 480px;
+    width: calc(100vw - 48px);
+}
+
+.confirm-message {
+    font-size: 13px;
+    color: var(--text-primary);
+    line-height: 1.5;
+    margin: 0 0 16px;
+}
+
+.confirm-buttons {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.cancel-btn {
+    padding: 4px 12px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 12px;
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.cancel-btn:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.confirm-btn {
+    padding: 4px 12px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 12px;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    line-height: 1.4;
+    font-weight: 600;
+}
+
+.confirm-btn:hover {
+    background: var(--border);
+}
