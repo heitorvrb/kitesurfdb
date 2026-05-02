@@ -1,2 +1,6 @@
+- [ ] Not showing decimal fields
+- [ ] Issues in text fields when editing the middle of the field (WHERE input, SQL Editor input)
+- [ ] Autocomplete fields in the WHERE input
 - [ ] Jump between relationships feature should work in any table result - View, SQl Editor.
 - [ ] Add View Source button in Table tabs. Same button as View tabs, but in a Table tab it should show the table DDL.
+- [ ] Set a default ordering for all tables and views. Maybe primary key DESC. Maybe save it to a config file.
