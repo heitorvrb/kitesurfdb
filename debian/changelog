@@ -1,3 +1,9 @@
+kitesurfdb (0.1.6) trixie; urgency=low
+
+  * Jump between relationships
+
+ -- Heitor Rodrigues <heitor.vrb@gmail.com>  Sat, 02 May 2026 09:36:56 -0300
+ 
 kitesurfdb (0.1.5) trixie; urgency=low
 
   * WHERE field filtering

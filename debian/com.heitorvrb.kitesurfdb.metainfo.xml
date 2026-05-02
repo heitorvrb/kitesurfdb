@@ -56,6 +56,13 @@
   </screenshots>
 
   <releases>
+    <release version="0.1.6" date="2026-05-02">
+      <description>
+        <ul>
+          <li>Jump between relationships</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.5" date="2026-04-25">
       <description>
         <ul>
