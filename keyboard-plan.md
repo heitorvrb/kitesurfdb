@@ -1,0 +1,1 @@
+- [ ] When I hit Browser Back media key in my keyboard, it should go back to the previous tab I had opened. Browser Forward button should also work to go forward in tab 'history'.

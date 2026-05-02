@@ -1,0 +1,2 @@
+- [ ] Jump between relationships feature should work in any table result - View, SQl Editor.
+- [ ] Add View Source button in Table tabs. Same button as View tabs, but in a Table tab it should show the table DDL.
