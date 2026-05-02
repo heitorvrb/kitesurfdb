@@ -1,5 +1,5 @@
 use app_core::tab_manager::{ColumnOrderInfo, SortDirection};
-use db::types::{DbValue, QueryResult};
+use db::types::{DbValue, ForeignKeyInfo, QueryResult};
 use dioxus::prelude::*;
 use std::collections::BTreeMap;
 
@@ -13,6 +13,13 @@ pub struct CellEdit {
     /// `Some(s)` to record the new value; `None` to clear a pending edit
     /// (e.g. user reverted the cell back to its original value).
     pub new_value: Option<String>,
+}
+
+/// Emitted when the user CTRL+clicks a foreign-key cell.
+#[derive(Clone, PartialEq, Debug)]
+pub struct FkJump {
+    pub fk: ForeignKeyInfo,
+    pub value: DbValue,
 }
 
 fn normalize_column_key(name: &str) -> String {
@@ -43,6 +50,8 @@ pub fn ResultsPanel(
     #[props(default)] edited_cells: BTreeMap<usize, BTreeMap<String, String>>,
     #[props(default)] on_cell_edit: Option<EventHandler<CellEdit>>,
     #[props(default)] on_save: Option<EventHandler>,
+    #[props(default)] foreign_keys: Vec<ForeignKeyInfo>,
+    #[props(default)] on_fk_jump: Option<EventHandler<FkJump>>,
     children: Element,
 ) -> Element {
     let mut editing: Signal<Option<(usize, String)>> = use_signal(|| None);
@@ -161,11 +170,29 @@ pub fn ResultsPanel(
                                             let is_null_display = edited_value.is_none()
                                                 && *cell == DbValue::Null;
 
+                                            let fk_for_cell: Option<ForeignKeyInfo> = foreign_keys
+                                                .iter()
+                                                .find(|fk| fk.from_column == col_name)
+                                                .cloned();
+                                            let is_fk_jumpable = fk_for_cell.is_some()
+                                                && !is_null_display
+                                                && on_fk_jump.is_some();
+
                                             let mut td_classes: Vec<String> = Vec::new();
                                             if is_null_display { td_classes.push(Styles::null_value.to_string()); }
                                             if is_edited { td_classes.push(Styles::edited_cell.to_string()); }
                                             if cell_can_be_edited { td_classes.push(Styles::editable_cell.to_string()); }
+                                            if is_fk_jumpable { td_classes.push(Styles::fk_cell.to_string()); }
                                             let td_class = td_classes.join(" ");
+
+                                            let title_text = if is_fk_jumpable {
+                                                fk_for_cell
+                                                    .as_ref()
+                                                    .map(|fk| format!("Ctrl+click to open {}", fk.to_table))
+                                                    .unwrap_or_default()
+                                            } else {
+                                                String::new()
+                                            };
 
                                             let original_value = cell.clone();
                                             let col_for_dblclick = col_name.clone();
@@ -180,9 +207,28 @@ pub fn ResultsPanel(
                                             let col_for_blur = col_name.clone();
                                             let handler_for_blur = on_cell_edit.clone();
 
+                                            let fk_for_click = fk_for_cell.clone();
+                                            let value_for_click = original_value.clone();
+                                            let handler_for_fk = on_fk_jump.clone();
+
                                             rsx! {
                                                 td {
                                                     class: "{td_class}",
+                                                    title: "{title_text}",
+                                                    onclick: move |evt: MouseEvent| {
+                                                        if !(evt.modifiers().ctrl() || evt.modifiers().meta()) {
+                                                            return;
+                                                        }
+                                                        let Some(fk) = fk_for_click.clone() else { return };
+                                                        if matches!(value_for_click, DbValue::Null) { return; }
+                                                        let Some(handler) = handler_for_fk.as_ref() else { return };
+                                                        evt.prevent_default();
+                                                        evt.stop_propagation();
+                                                        handler.call(FkJump {
+                                                            fk,
+                                                            value: value_for_click.clone(),
+                                                        });
+                                                    },
                                                     ondoubleclick: move |_| {
                                                         if !cell_can_be_edited { return; }
                                                         let seed = match &edited_for_dblclick {

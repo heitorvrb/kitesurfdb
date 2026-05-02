@@ -199,9 +199,9 @@ User action (Run button / Ctrl+Enter / click table in sidebar)
 - [x] j and k move up and down in the search results list
 
 ### Phase 7 - Edit inline
-- [ ] When I click on a cell of a results tab, be it in the sql editor or a table, it should open an input in place for editing. If the user edits the value and hits enter, it should show as an edited cell by a different color. If any cell is edited, at the bottom a "Save" button should appear. When clicked, it should pick any lines where a cell was edited and do an SQL UPDATE statement for each of those lines.
+- [x] When I click on a cell of a results tab, be it in the sql editor or a table, it should open an input in place for editing. If the user edits the value and hits enter, it should show as an edited cell by a different color. If any cell is edited, at the bottom a "Save" button should appear. When clicked, it should pick any lines where a cell was edited and do an SQL UPDATE statement for each of those lines.
 
-- [ ] Jump between relationships - in any result table, when the field is a foreign key, CTRL+click on it opens a new tab for the foreign table with a WHERE to that record.
+- [x] Jump between relationships - in any result table, when the field is a foreign key, CTRL+click on it opens a new tab for the foreign table with a WHERE to that record.
 
 
 ### Future (Phase 6+)

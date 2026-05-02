@@ -1,14 +1,14 @@
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use app_core::sql_update::{build_updates_for_tab, quote_qualified};
+use app_core::sql_update::{build_updates_for_tab, format_where_match, quote_ident, quote_qualified};
 use app_core::tab_manager::{PAGE_SIZE, TabManager, TabType};
 use db::traits::DbBackend;
 use db::types::{DbValue, ObjectType, SchemaInfo};
 use dioxus::prelude::*;
 use uuid::Uuid;
 
-use super::results_panel::{CellEdit, ResultsPanel};
+use super::results_panel::{CellEdit, FkJump, ResultsPanel};
 use super::sql_display::SqlDisplay;
 use crate::operation_feedback::{
     OP_TIMEOUT, SLOW_WARNING_MS, remaining_timeout, slow_warning_message, timeout_error_message,
@@ -197,6 +197,42 @@ pub fn TableBrowser(
         }
     });
 
+    // Lazy-fetch FK metadata for tables (skip views) on first render.
+    use_effect(move || {
+        let needs_fetch = {
+            let tm = tab_manager.read();
+            tm.tab_by_id(tab_id)
+                .and_then(|t| {
+                    if let TabType::TableBrowser {
+                        object_name,
+                        object_type,
+                        foreign_keys,
+                        ..
+                    } = &t.tab_type
+                    {
+                        if *object_type == ObjectType::Table && foreign_keys.is_none() {
+                            Some(object_name.clone())
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    }
+                })
+        };
+
+        if let Some(object_name) = needs_fetch {
+            spawn(async move {
+                let b = { backend.read().as_ref().cloned() };
+                let Some(b) = b else { return };
+                let (schema, table) = split_qualified_name(&object_name);
+                if let Ok(fks) = b.get_foreign_keys(schema.as_deref(), &table).await {
+                    tab_manager.write().set_table_browser_foreign_keys(tab_id, fks);
+                }
+            });
+        }
+    });
+
     let (
         generated_sql,
         where_clause,
@@ -206,6 +242,7 @@ pub fn TableBrowser(
         total_count,
         ordering,
         view_source_target,
+        foreign_keys,
     ) = {
         let tm = tab_manager.read();
         let tab = tm.tab_by_id(tab_id);
@@ -245,6 +282,15 @@ pub fn TableBrowser(
                 None
             }
         });
+        let foreign_keys = tab
+            .and_then(|t| {
+                if let TabType::TableBrowser { foreign_keys, .. } = &t.tab_type {
+                    foreign_keys.clone()
+                } else {
+                    None
+                }
+            })
+            .unwrap_or_default();
         (
             sql,
             where_clause,
@@ -254,6 +300,7 @@ pub fn TableBrowser(
             total_count,
             ordering,
             view_source_target,
+            foreign_keys,
         )
     };
 
@@ -483,6 +530,29 @@ pub fn TableBrowser(
         run_transaction();
     };
 
+    let on_fk_jump = move |jump: FkJump| {
+        // Don't navigate on NULL — the target row would be ambiguous and the
+        // generated WHERE would just hide all rows anyway.
+        if matches!(jump.value, DbValue::Null) {
+            return;
+        }
+        let bk = match backend.read().as_ref() {
+            Some(b) => b.backend_kind(),
+            None => return,
+        };
+        let predicate = format!(
+            "{} {}",
+            quote_ident(&jump.fk.to_column),
+            format_where_match(&jump.value, bk),
+        );
+        let new_id = tab_manager
+            .write()
+            .open_table_browser(jump.fk.to_table.clone(), jump.fk.to_schema.clone());
+        tab_manager
+            .write()
+            .set_table_browser_where(new_id, predicate);
+    };
+
     let elapsed_ms = *loading_elapsed_ms.read();
     let elapsed_secs = elapsed_ms as f64 / 1000.0;
     let taking_longer = is_loading && elapsed_ms >= SLOW_WARNING_MS;
@@ -549,6 +619,8 @@ pub fn TableBrowser(
                 ordering,
                 editable: true,
                 edited_cells,
+                foreign_keys,
+                on_fk_jump,
                 on_cell_edit: move |edit: CellEdit| {
                     tab_manager.write().set_edited_cell(
                         tab_id,

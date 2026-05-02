@@ -1,7 +1,9 @@
 use async_trait::async_trait;
 
 use crate::error::DbError;
-use crate::types::{BackendType, ConnectionConfig, ObjectType, QueryResult, SchemaInfo};
+use crate::types::{
+    BackendType, ConnectionConfig, ForeignKeyInfo, ObjectType, QueryResult, SchemaInfo,
+};
 
 #[async_trait]
 pub trait DbBackend: Send + Sync {
@@ -24,6 +26,15 @@ pub trait DbBackend: Send + Sync {
         schema: Option<&str>,
         table: &str,
     ) -> Result<Vec<String>, DbError>;
+
+    /// Returns single-column foreign keys defined on `table`. Composite
+    /// (multi-column) FKs are dropped — they are rare in practice and the
+    /// CTRL+click jump UI cannot represent them. Empty Vec means no FKs.
+    async fn get_foreign_keys(
+        &self,
+        schema: Option<&str>,
+        table: &str,
+    ) -> Result<Vec<ForeignKeyInfo>, DbError>;
 
     async fn introspect(&self) -> Result<SchemaInfo, DbError>;
 

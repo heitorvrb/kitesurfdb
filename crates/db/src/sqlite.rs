@@ -114,6 +114,61 @@ impl DbBackend for SqliteBackend {
         Ok(pks.into_iter().map(|(_, name)| name).collect())
     }
 
+    async fn get_foreign_keys(
+        &self,
+        _schema: Option<&str>,
+        table: &str,
+    ) -> Result<Vec<ForeignKeyInfo>, DbError> {
+        // PRAGMA can't bind params; escape `"` by doubling.
+        let escaped = table.replace('"', "\"\"");
+        let sql = format!("PRAGMA foreign_key_list(\"{escaped}\")");
+        let rows: Vec<SqliteRow> = sqlx::query(&sql).fetch_all(&self.pool).await?;
+
+        // Each FK constraint is identified by `id` and may span multiple rows
+        // (one per column). Group rows by `id`; keep only single-column FKs.
+        let mut by_id: std::collections::BTreeMap<i64, Vec<&SqliteRow>> =
+            std::collections::BTreeMap::new();
+        for row in &rows {
+            let id: i64 = row.get("id");
+            by_id.entry(id).or_default().push(row);
+        }
+
+        let mut out = Vec::new();
+        for (_, group) in by_id {
+            if group.len() != 1 {
+                continue;
+            }
+            let row = group[0];
+            let from_column: String = row.get("from");
+            let to_table: String = row.get("table");
+            // SQLite stores NULL in `to` when REFERENCES omits the column;
+            // sqlx surfaces that as Option<String>.
+            let to_column: Option<String> = row.try_get("to").ok().flatten();
+
+            let to_column = match to_column {
+                Some(c) => c,
+                None => {
+                    // Resolve to the target table's single-column primary key.
+                    let pks = self.get_primary_keys(None, &to_table).await?;
+                    if pks.len() == 1 {
+                        pks.into_iter().next().unwrap()
+                    } else {
+                        // Composite or missing PK — can't disambiguate.
+                        continue;
+                    }
+                }
+            };
+
+            out.push(ForeignKeyInfo {
+                from_column,
+                to_schema: None,
+                to_table,
+                to_column,
+            });
+        }
+        Ok(out)
+    }
+
     async fn get_object_definition(
         &self,
         name: &str,
@@ -478,6 +533,100 @@ mod tests {
 
         let pks = backend.get_primary_keys(None, "notes").await.unwrap();
         assert!(pks.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_get_foreign_keys_single_column() {
+        let config = sqlite_config(":memory:");
+        let backend = SqliteBackend::connect(&config).await.unwrap();
+
+        backend
+            .execute_query("CREATE TABLE parent (id INTEGER PRIMARY KEY)")
+            .await
+            .unwrap();
+        backend
+            .execute_query(
+                "CREATE TABLE child (id INTEGER PRIMARY KEY, parent_id INTEGER REFERENCES parent(id))",
+            )
+            .await
+            .unwrap();
+
+        let fks = backend.get_foreign_keys(None, "child").await.unwrap();
+        assert_eq!(fks.len(), 1);
+        assert_eq!(
+            fks[0],
+            ForeignKeyInfo {
+                from_column: "parent_id".into(),
+                to_schema: None,
+                to_table: "parent".into(),
+                to_column: "id".into(),
+            }
+        );
+    }
+
+    #[tokio::test]
+    async fn test_get_foreign_keys_implicit_pk_target() {
+        let config = sqlite_config(":memory:");
+        let backend = SqliteBackend::connect(&config).await.unwrap();
+
+        backend
+            .execute_query("CREATE TABLE parent (id INTEGER PRIMARY KEY)")
+            .await
+            .unwrap();
+        // Note: REFERENCES parent (no column) — should resolve to PK.
+        backend
+            .execute_query(
+                "CREATE TABLE child (id INTEGER PRIMARY KEY, parent_id INTEGER REFERENCES parent)",
+            )
+            .await
+            .unwrap();
+
+        let fks = backend.get_foreign_keys(None, "child").await.unwrap();
+        assert_eq!(fks.len(), 1);
+        assert_eq!(fks[0].to_table, "parent");
+        assert_eq!(fks[0].to_column, "id");
+        assert_eq!(fks[0].from_column, "parent_id");
+    }
+
+    #[tokio::test]
+    async fn test_get_foreign_keys_composite_skipped() {
+        let config = sqlite_config(":memory:");
+        let backend = SqliteBackend::connect(&config).await.unwrap();
+
+        backend
+            .execute_query(
+                "CREATE TABLE parent (a INTEGER, b INTEGER, PRIMARY KEY (a, b))",
+            )
+            .await
+            .unwrap();
+        backend
+            .execute_query(
+                "CREATE TABLE child (\
+                    id INTEGER PRIMARY KEY, \
+                    pa INTEGER, \
+                    pb INTEGER, \
+                    FOREIGN KEY (pa, pb) REFERENCES parent(a, b)\
+                )",
+            )
+            .await
+            .unwrap();
+
+        let fks = backend.get_foreign_keys(None, "child").await.unwrap();
+        assert!(fks.is_empty(), "composite FKs should be dropped");
+    }
+
+    #[tokio::test]
+    async fn test_get_foreign_keys_none() {
+        let config = sqlite_config(":memory:");
+        let backend = SqliteBackend::connect(&config).await.unwrap();
+
+        backend
+            .execute_query("CREATE TABLE notes (body TEXT)")
+            .await
+            .unwrap();
+
+        let fks = backend.get_foreign_keys(None, "notes").await.unwrap();
+        assert!(fks.is_empty());
     }
 
     #[tokio::test]

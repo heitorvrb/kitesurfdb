@@ -82,6 +82,17 @@ pub struct ColumnInfo {
     pub type_name: String,
 }
 
+/// A single-column foreign key relationship from one table to another.
+/// Composite (multi-column) FKs are intentionally not represented here —
+/// backends drop them during introspection.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ForeignKeyInfo {
+    pub from_column: String,
+    pub to_schema: Option<String>,
+    pub to_table: String,
+    pub to_column: String,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum DbValue {
     Null,

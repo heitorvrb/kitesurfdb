@@ -1,4 +1,4 @@
-use db::types::{ObjectType, QueryResult};
+use db::types::{ForeignKeyInfo, ObjectType, QueryResult};
 use std::collections::BTreeMap;
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
@@ -24,6 +24,9 @@ pub enum TabType {
         /// Cached list of primary key column names. `None` means we have not
         /// fetched it yet; `Some(empty)` means the table has no primary key.
         primary_keys: Option<Vec<String>>,
+        /// Cached single-column FKs for this table. `None` = not fetched yet;
+        /// `Some(empty)` = no FKs. Only populated for `object_type == Table`.
+        foreign_keys: Option<Vec<ForeignKeyInfo>>,
         /// Pending edits the user has typed but not yet saved.
         /// Outer key is the row index in `Tab.result.rows`; inner key is the
         /// column name; value is the user's typed string for that cell.
@@ -160,6 +163,14 @@ impl TabManager {
             && let TabType::TableBrowser { primary_keys, .. } = &mut tab.tab_type
         {
             *primary_keys = Some(pks);
+        }
+    }
+
+    pub fn set_table_browser_foreign_keys(&mut self, id: Uuid, fks: Vec<ForeignKeyInfo>) {
+        if let Some(tab) = self.tab_by_id_mut(id)
+            && let TabType::TableBrowser { foreign_keys, .. } = &mut tab.tab_type
+        {
+            *foreign_keys = Some(fks);
         }
     }
 
@@ -380,6 +391,7 @@ impl TabManager {
                 object_type,
                 where_clause: String::new(),
                 primary_keys: None,
+                foreign_keys: None,
                 edited_cells: BTreeMap::new(),
             },
         )
@@ -668,6 +680,7 @@ mod tests {
                 object_type: ObjectType::Table,
                 where_clause: String::new(),
                 primary_keys: None,
+                foreign_keys: None,
                 edited_cells: BTreeMap::new(),
             }
         );
@@ -688,6 +701,7 @@ mod tests {
                 object_type: ObjectType::Table,
                 where_clause: String::new(),
                 primary_keys: None,
+                foreign_keys: None,
                 edited_cells: BTreeMap::new(),
             }
         );
@@ -708,6 +722,7 @@ mod tests {
                 object_type: ObjectType::View,
                 where_clause: String::new(),
                 primary_keys: None,
+                foreign_keys: None,
                 edited_cells: BTreeMap::new(),
             }
         );
@@ -1209,5 +1224,30 @@ mod tests {
             panic!();
         };
         assert_eq!(primary_keys.as_deref(), Some(&["id".to_string()][..]));
+    }
+
+    #[test]
+    fn set_table_browser_foreign_keys_caches_them() {
+        let mut tm = TabManager::new();
+        let id = tm.open_table_browser("orders".into(), None);
+
+        let tab = tm.tab_by_id(id).unwrap();
+        let TabType::TableBrowser { foreign_keys, .. } = &tab.tab_type else {
+            panic!();
+        };
+        assert!(foreign_keys.is_none());
+
+        let fk = ForeignKeyInfo {
+            from_column: "user_id".into(),
+            to_schema: None,
+            to_table: "users".into(),
+            to_column: "id".into(),
+        };
+        tm.set_table_browser_foreign_keys(id, vec![fk.clone()]);
+        let tab = tm.tab_by_id(id).unwrap();
+        let TabType::TableBrowser { foreign_keys, .. } = &tab.tab_type else {
+            panic!();
+        };
+        assert_eq!(foreign_keys.as_deref(), Some(&[fk][..]));
     }
 }

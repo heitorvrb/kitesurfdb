@@ -146,6 +146,65 @@ impl DbBackend for PostgresBackend {
         Ok(rows.iter().map(|row| row.get("column_name")).collect())
     }
 
+    async fn get_foreign_keys(
+        &self,
+        schema: Option<&str>,
+        table: &str,
+    ) -> Result<Vec<ForeignKeyInfo>, DbError> {
+        let schema = schema.unwrap_or("public");
+        // Group by constraint name; keep only single-column FKs.
+        let sql = "SELECT \
+                       kcu.column_name        AS from_column, \
+                       ccu.table_schema       AS to_schema, \
+                       ccu.table_name         AS to_table, \
+                       ccu.column_name        AS to_column, \
+                       rc.constraint_name     AS cname \
+                   FROM information_schema.table_constraints tc \
+                   JOIN information_schema.key_column_usage kcu \
+                          ON tc.constraint_schema = kcu.constraint_schema \
+                         AND tc.constraint_name = kcu.constraint_name \
+                   JOIN information_schema.referential_constraints rc \
+                          ON tc.constraint_schema = rc.constraint_schema \
+                         AND tc.constraint_name = rc.constraint_name \
+                   JOIN information_schema.constraint_column_usage ccu \
+                          ON rc.unique_constraint_schema = ccu.constraint_schema \
+                         AND rc.unique_constraint_name = ccu.constraint_name \
+                   WHERE tc.constraint_type = 'FOREIGN KEY' \
+                     AND tc.table_schema = $1 \
+                     AND tc.table_name = $2 \
+                   ORDER BY rc.constraint_name, kcu.ordinal_position";
+
+        let rows: Vec<PgRow> = sqlx::query(sql)
+            .bind(schema)
+            .bind(table)
+            .fetch_all(&self.pool)
+            .await?;
+
+        // Bucket rows by constraint name; emit only constraints with one row.
+        let mut by_constraint: std::collections::BTreeMap<String, Vec<&PgRow>> =
+            std::collections::BTreeMap::new();
+        for row in &rows {
+            let cname: String = row.get("cname");
+            by_constraint.entry(cname).or_default().push(row);
+        }
+
+        let mut out = Vec::new();
+        for (_, group) in by_constraint {
+            if group.len() != 1 {
+                continue;
+            }
+            let row = group[0];
+            let to_schema: String = row.get("to_schema");
+            out.push(ForeignKeyInfo {
+                from_column: row.get("from_column"),
+                to_schema: Some(to_schema),
+                to_table: row.get("to_table"),
+                to_column: row.get("to_column"),
+            });
+        }
+        Ok(out)
+    }
+
     async fn get_object_definition(
         &self,
         name: &str,
@@ -584,6 +643,49 @@ mod tests {
 
         assert_eq!(delete_result.rows_affected, 0);
 
+        backend.disconnect().await.unwrap();
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_get_foreign_keys() {
+        let config = pg_config();
+        let backend = PostgresBackend::connect(&config).await.unwrap();
+
+        // Clean up in case a prior run left these around.
+        let _ = backend
+            .execute_query("DROP TABLE IF EXISTS test_fk_child, test_fk_parent")
+            .await;
+
+        backend
+            .execute_query("CREATE TABLE test_fk_parent (id INTEGER PRIMARY KEY)")
+            .await
+            .unwrap();
+        backend
+            .execute_query(
+                "CREATE TABLE test_fk_child (\
+                    id INTEGER PRIMARY KEY, \
+                    parent_id INTEGER REFERENCES test_fk_parent(id)\
+                )",
+            )
+            .await
+            .unwrap();
+
+        let fks = backend
+            .get_foreign_keys(Some("public"), "test_fk_child")
+            .await
+            .unwrap();
+
+        assert_eq!(fks.len(), 1);
+        assert_eq!(fks[0].from_column, "parent_id");
+        assert_eq!(fks[0].to_table, "test_fk_parent");
+        assert_eq!(fks[0].to_column, "id");
+        assert_eq!(fks[0].to_schema.as_deref(), Some("public"));
+
+        backend
+            .execute_query("DROP TABLE test_fk_child, test_fk_parent")
+            .await
+            .unwrap();
         backend.disconnect().await.unwrap();
     }
 }

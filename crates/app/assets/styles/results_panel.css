@@ -87,6 +87,14 @@
     cursor: text;
 }
 
+.fk-cell {
+    color: var(--accent);
+}
+
+.fk-cell:hover {
+    text-decoration: underline;
+}
+
 .edited-cell {
     background: rgba(137, 180, 250, 0.25);
     font-weight: 600;
