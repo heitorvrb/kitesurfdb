@@ -33,7 +33,14 @@ pub fn use_keyboard_shortcuts(
                     return;
                 }
 
-                if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 't') {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'T') {
+                    e.preventDefault();
+                    const el = document.getElementById('where-input');
+                    if (el) { el.focus(); el.select(); }
+                    return;
+                }
+
+                if ((e.ctrlKey || e.metaKey) && e.key === 't') {
                     e.preventDefault();
                     dioxus.send('NEW_EDITOR_TAB');
                     return;

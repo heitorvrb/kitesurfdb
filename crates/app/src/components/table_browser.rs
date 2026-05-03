@@ -573,6 +573,7 @@ pub fn TableBrowser(
             div { class: Styles::where_bar,
                 span { class: Styles::where_label, "WHERE" }
                 input {
+                    id: "where-input",
                     class: Styles::where_input,
                     r#type: "text",
                     placeholder: "Type a filter and press Enter (e.g. id > 5)",
