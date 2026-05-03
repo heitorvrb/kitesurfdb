@@ -1,3 +1,12 @@
+kitesurfdb (0.1.7) trixie; urgency=low
+
+  * Easier moving to search results
+  * Shortcut to go to WHERE input
+  * Fix decimal and date fields displaying
+  * Fix TIMESTAMPTZ and remove TIMETZ
+
+ -- Heitor Rodrigues <heitor.vrb@gmail.com>  Sun, 03 May 2026 20:46:23 -0300
+
 kitesurfdb (0.1.6) trixie; urgency=low
 
   * Jump between relationships

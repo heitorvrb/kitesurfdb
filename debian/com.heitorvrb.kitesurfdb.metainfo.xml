@@ -56,6 +56,16 @@
   </screenshots>
 
   <releases>
+    <release version="0.1.7" date="2026-05-03">
+      <description>
+        <ul>
+          <li>Easier moving to search results</li>
+          <li>Shortcut to go to WHERE input</li>
+          <li>Fix decimal and date fields displaying</li>
+          <li>Fix TIMESTAMPTZ and remove TIMETZ</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.6" date="2026-05-02">
       <description>
         <ul>
