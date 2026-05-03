@@ -1,4 +1,4 @@
-- [ ] Not showing decimal fields
+- [x] Not showing decimal fields
 - [ ] Issues in text fields when editing the middle of the field (WHERE input, SQL Editor input)
 - [ ] Autocomplete fields in the WHERE input
 - [ ] Jump between relationships feature should work in any table result - View, SQl Editor.

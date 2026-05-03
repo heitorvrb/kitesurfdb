@@ -417,6 +417,22 @@ fn extract_row(row: &PgRow) -> Vec<DbValue> {
                     .try_get::<chrono::DateTime<chrono::Utc>, _>(idx)
                     .map(|v| DbValue::Timestamp(v.naive_utc()))
                     .unwrap_or(DbValue::Null),
+                "NUMERIC" => row
+                    .try_get::<rust_decimal::Decimal, _>(idx)
+                    .map(|v| DbValue::Text(v.to_string()))
+                    .unwrap_or(DbValue::Null),
+                "DATE" => row
+                    .try_get::<chrono::NaiveDate, _>(idx)
+                    .map(|v| DbValue::Text(v.to_string()))
+                    .unwrap_or(DbValue::Null),
+                "TIME" => row
+                    .try_get::<chrono::NaiveTime, _>(idx)
+                    .map(|v| DbValue::Text(v.to_string()))
+                    .unwrap_or(DbValue::Null),
+                "TIMETZ" => row
+                    .try_get::<sqlx::postgres::types::PgTimeTz<chrono::NaiveTime, chrono::FixedOffset>, _>(idx)
+                    .map(|v| DbValue::Text(format!("{}{}", v.time, v.offset)))
+                    .unwrap_or(DbValue::Null),
                 _ => row
                     .try_get::<String, _>(idx)
                     .map(DbValue::Text)
@@ -686,6 +702,77 @@ mod tests {
             .execute_query("DROP TABLE test_fk_child, test_fk_parent")
             .await
             .unwrap();
+        backend.disconnect().await.unwrap();
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_numeric_field() {
+        let config = pg_config();
+        let backend = PostgresBackend::connect(&config).await.unwrap();
+
+        backend
+            .execute_query(
+                "CREATE TEMP TABLE test_numeric (price NUMERIC(10,2), qty NUMERIC)",
+            )
+            .await
+            .unwrap();
+        backend
+            .execute_query("INSERT INTO test_numeric VALUES (3.14, 42)")
+            .await
+            .unwrap();
+
+        let result = backend
+            .execute_query("SELECT price, qty FROM test_numeric")
+            .await
+            .unwrap();
+
+        assert_eq!(result.rows.len(), 1);
+        assert!(
+            matches!(result.rows[0][0], DbValue::Text(_)),
+            "expected Text for NUMERIC(10,2), got {:?}",
+            result.rows[0][0]
+        );
+        assert!(
+            matches!(result.rows[0][1], DbValue::Text(_)),
+            "expected Text for NUMERIC, got {:?}",
+            result.rows[0][1]
+        );
+
+        backend.disconnect().await.unwrap();
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_date_time_fields() {
+        let config = pg_config();
+        let backend = PostgresBackend::connect(&config).await.unwrap();
+
+        let result = backend
+            .execute_query(
+                "SELECT '2024-01-15'::DATE AS d, '14:30:00'::TIME AS t, \
+                 '14:30:00+05:30'::TIMETZ AS tz",
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(result.rows.len(), 1);
+        assert!(
+            matches!(result.rows[0][0], DbValue::Text(_)),
+            "expected Text for DATE, got {:?}",
+            result.rows[0][0]
+        );
+        assert!(
+            matches!(result.rows[0][1], DbValue::Text(_)),
+            "expected Text for TIME, got {:?}",
+            result.rows[0][1]
+        );
+        assert!(
+            matches!(result.rows[0][2], DbValue::Text(_)),
+            "expected Text for TIMETZ, got {:?}",
+            result.rows[0][2]
+        );
+
         backend.disconnect().await.unwrap();
     }
 }

@@ -270,10 +270,17 @@ fn extract_row(row: &SqliteRow) -> Vec<DbValue> {
                     .try_get::<Vec<u8>, _>(idx)
                     .map(DbValue::Bytes)
                     .unwrap_or(DbValue::Null),
-                _ => row
-                    .try_get::<String, _>(idx)
-                    .map(DbValue::Text)
-                    .unwrap_or(DbValue::Null),
+                _ => {
+                    if let Ok(v) = row.try_get::<i64, _>(idx) {
+                        DbValue::Int(v)
+                    } else if let Ok(v) = row.try_get::<f64, _>(idx) {
+                        DbValue::Float(v)
+                    } else {
+                        row.try_get::<String, _>(idx)
+                            .map(DbValue::Text)
+                            .unwrap_or(DbValue::Null)
+                    }
+                }
             }
         })
         .collect()
@@ -685,5 +692,69 @@ mod tests {
         // Execution time should be recorded (non-zero or at least not panic)
         // Just verify it doesn't panic and has a value
         let _ = result.execution_time;
+    }
+
+    #[tokio::test]
+    async fn test_date_field() {
+        let config = sqlite_config(":memory:");
+        let backend = SqliteBackend::connect(&config).await.unwrap();
+
+        backend
+            .execute_query("CREATE TABLE events (event_date DATE, event_time TIME)")
+            .await
+            .unwrap();
+        backend
+            .execute_query("INSERT INTO events VALUES ('2024-01-15', '14:30:00')")
+            .await
+            .unwrap();
+
+        let result = backend
+            .execute_query("SELECT event_date, event_time FROM events")
+            .await
+            .unwrap();
+
+        assert_eq!(result.rows.len(), 1);
+        assert!(
+            matches!(result.rows[0][0], DbValue::Text(_)),
+            "expected Text for DATE, got {:?}",
+            result.rows[0][0]
+        );
+        assert!(
+            matches!(result.rows[0][1], DbValue::Text(_)),
+            "expected Text for TIME, got {:?}",
+            result.rows[0][1]
+        );
+    }
+
+    #[tokio::test]
+    async fn test_decimal_field() {
+        let config = sqlite_config(":memory:");
+        let backend = SqliteBackend::connect(&config).await.unwrap();
+
+        backend
+            .execute_query("CREATE TABLE products (price DECIMAL(10,2), qty NUMERIC)")
+            .await
+            .unwrap();
+        backend
+            .execute_query("INSERT INTO products VALUES (3.14, 42)")
+            .await
+            .unwrap();
+
+        let result = backend
+            .execute_query("SELECT price, qty FROM products")
+            .await
+            .unwrap();
+
+        assert_eq!(result.rows.len(), 1);
+        assert!(
+            matches!(result.rows[0][0], DbValue::Float(_) | DbValue::Text(_)),
+            "expected non-null decimal value, got {:?}",
+            result.rows[0][0]
+        );
+        assert!(
+            matches!(result.rows[0][1], DbValue::Int(_) | DbValue::Float(_) | DbValue::Text(_)),
+            "expected non-null numeric value, got {:?}",
+            result.rows[0][1]
+        );
     }
 }
