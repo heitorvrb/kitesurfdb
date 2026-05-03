@@ -54,6 +54,7 @@ pub fn SearchModal(
 
     let results_for_submit = results.clone();
     let results_for_keys = results.clone();
+    let results_for_input = results.clone();
 
     let results_for_effect = results.clone();
     use_effect(move || {
@@ -113,6 +114,19 @@ pub fn SearchModal(
                                 open_object(&mut tab_manager.write(), selected);
                                 show_search_modal.set(false);
                             }
+                        } else if evt.key() == Key::ArrowDown && !results_for_input.is_empty() {
+                            evt.prevent_default();
+                            document::eval(
+                                r#"
+                                const input = document.getElementById('object-search-input');
+                                if (input && input.selectionStart === input.value.length) {
+                                    const results = document.getElementById('object-search-results');
+                                    if (results) { results.focus(); }
+                                } else if (input) {
+                                    input.setSelectionRange(input.value.length, input.value.length);
+                                }
+                                "#,
+                            );
                         }
                     },
                 }
