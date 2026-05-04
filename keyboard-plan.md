@@ -1,3 +1,4 @@
 - [x] When I hit arrow-key-down in the search field on the search model, and search results exist, and the cursor is already on the 'end' of the search input field, focus on search results
 - [x] a hotkey to jump to the WHERE field (maybe Ctrl+Shift+T)
+- [ ] Ctrl+s to save an edit
 - [ ] When I hit Browser Back media key in my keyboard, it should go back to the previous tab I had opened. Browser Forward button should also work to go forward in tab 'history'.
