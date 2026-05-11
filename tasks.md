@@ -1,4 +1,5 @@
 - [x] Not showing decimal fields
+- [ ] When searching, assume the string typed must be a the start of the table/view/database object name. Only if the user start with a *, search anywhere in the name.
 - [ ] When the table has a lot of columns, the bar with "Rows: 1 | Total: 1 | Time: 16.375854ms etc." stops at the current viewport. This is correct. But when I roll horizontally, this bar should stay put, not move together with the table.
 - [ ] Issues in text fields when editing the middle of the field (WHERE input, SQL Editor input)
 - [ ] Autocomplete fields in the WHERE input
